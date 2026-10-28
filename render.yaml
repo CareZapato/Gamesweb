@@ -4,17 +4,15 @@ services:
     name: gamesweb
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
+    # --include=dev: Vite lives in devDependencies; do not set NODE_ENV=production at build time.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: NODE_ENV
-        value: production
       - key: HOST
         value: 0.0.0.0
       - key: STATIC_DIR
         value: client/dist
-      - key: ALLOWED_ORIGINS
-        sync: false

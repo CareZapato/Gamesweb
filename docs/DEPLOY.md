@@ -36,7 +36,7 @@ Sin Blueprint (New → Web Service) usa los mismos valores:
 | Start Command | `npm start` |
 | Health Check Path | `/health` |
 | Variable `NODE_VERSION` | `22` |
-| Variable `ALLOWED_ORIGINS` | `https://<nombre>.onrender.com` |
+| Variable `ALLOWED_ORIGINS` | Opcional: el servidor usa `RENDER_EXTERNAL_URL` solo si está vacía |
 
 ### Cómo encaja con el servidor
 

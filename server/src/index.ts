@@ -13,10 +13,14 @@ if (existsSync(envFile)) {
 
 const port = Number(process.env.PORT ?? 2567);
 const host = process.env.HOST ?? '0.0.0.0';
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+let allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
+// Render injects RENDER_EXTERNAL_URL at runtime; use it when ALLOWED_ORIGINS was not configured.
+if (allowedOrigins.length === 0 && process.env.RENDER_EXTERNAL_URL) {
+  allowedOrigins = [process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')];
+}
 const simulateLatencyMs = Number(process.env.SIMULATE_LATENCY_MS ?? 0);
 const staticDir = process.env.STATIC_DIR ?? defaultStaticDir();
 
