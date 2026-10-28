@@ -278,8 +278,9 @@ export const stepMovement = (s: PlayerSimState, cmd: InputCmd, world: CollisionW
       dx = -Math.sin(cmd.yaw);
       dz = -Math.cos(cmd.yaw);
     }
-    s.dashDx = dx;
-    s.dashDz = dz;
+    const dl = Math.hypot(dx, dz) || 1;
+    s.dashDx = dx / dl;
+    s.dashDz = dz / dl;
     s.dashTime = PLAYER.dashDuration;
     s.dashCd = PLAYER.dashCooldown;
     if (s.vy < 0) s.vy = 0;

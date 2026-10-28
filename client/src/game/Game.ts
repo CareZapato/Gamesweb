@@ -66,6 +66,7 @@ const SIM_FIELDS: (keyof PlayerSimState)[] = [
   'x', 'y', 'z', 'vx', 'vy', 'vz', 'onGround', 'dashTime', 'dashCd', 'dashDx', 'dashDz', 'dashHeld',
   'weapon', 'pendingWeapon', 'switchTime', 'fireCd', 'spread', 'shotCounter', 'fireHeld', 'charge',
   'portalCd', 'padCd', 'warps', 'warpYaw', 'warpTo', 'pads',
+  'crouched', 'slideTime', 'slideCd', 'slideDx', 'slideDz', 'slideHeld',
 ];
 
 /** Minimum time between two plasma beam sounds (the beam fires every tick, the sound does not). */
@@ -77,7 +78,14 @@ const simFromOwn = (me: OwnState): PlayerSimState => {
   const s = {} as Record<string, unknown>;
   for (const k of SIM_FIELDS) s[k] = me[k];
   s.ammo = me.ammo.slice();
-  return s as unknown as PlayerSimState;
+  const out = s as unknown as PlayerSimState;
+  out.crouched ??= false;
+  out.slideTime ??= 0;
+  out.slideCd ??= 0;
+  out.slideDx ??= 0;
+  out.slideDz ??= 0;
+  out.slideHeld ??= false;
+  return out;
 };
 
 interface RemoteView {
