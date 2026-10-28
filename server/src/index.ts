@@ -22,10 +22,13 @@ if (allowedOrigins.length === 0 && process.env.RENDER_EXTERNAL_URL) {
   allowedOrigins = [process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')];
 }
 const simulateLatencyMs = Number(process.env.SIMULATE_LATENCY_MS ?? 0);
-const staticDir = process.env.STATIC_DIR ?? defaultStaticDir();
+const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
+const staticDir = process.env.STATIC_DIR ? resolve(repoRoot, process.env.STATIC_DIR) : defaultStaticDir();
 
 await createGameServer({ port, host, allowedOrigins, simulateLatencyMs, staticDir });
 
 console.log(`[servidor] servidor escuchando en ${host}:${port}`);
+if (existsSync(staticDir)) console.log(`[servidor] cliente estático: ${staticDir}`);
+else console.warn(`[servidor] sin cliente estático (no existe ${staticDir}); solo API/WebSocket`);
 if (simulateLatencyMs > 0) console.log(`[servidor] latencia simulada: ${simulateLatencyMs} ms (ida y vuelta)`);
 if (allowedOrigins.length > 0) console.log(`[servidor] orígenes permitidos: ${allowedOrigins.join(', ')}`);

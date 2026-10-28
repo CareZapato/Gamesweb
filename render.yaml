@@ -14,5 +14,3 @@ services:
         value: "22"
       - key: HOST
         value: 0.0.0.0
-      - key: STATIC_DIR
-        value: client/dist

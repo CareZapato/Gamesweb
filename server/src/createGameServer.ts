@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { matchMaker, Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
@@ -43,7 +43,14 @@ export const createGameServer = async (opts: GameServerOptions) => {
         res.json({ ok: true, uptime: Math.round(process.uptime()) });
       });
       if (opts.staticDir && existsSync(opts.staticDir)) {
-        app.use(express.static(opts.staticDir, { index: 'index.html', maxAge: '1h' }));
+        const root = opts.staticDir;
+        app.use(express.static(root, { index: 'index.html', maxAge: '1h' }));
+        const rt = join(root, 'realtournament/index.html');
+        app.get('/realtournament', (_req, res) => res.redirect(301, '/realtournament/'));
+        app.get('/realtournament/', (_req, res, next) => {
+          if (existsSync(rt)) res.sendFile(rt);
+          else next();
+        });
       }
     },
   });
