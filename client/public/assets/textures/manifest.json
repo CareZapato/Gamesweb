@@ -1,0 +1,14 @@
+{
+  "textures": {
+    "floor": "floor_antislip.png",
+    "metal": "metal_plate.png",
+    "panel": "wall_panel.png",
+    "grate": "grate.png",
+    "concrete": "concrete_tech.png",
+    "red": "team_red.png",
+    "blue": "team_blue.png",
+    "trim": "hazard_trim.png",
+    "dark": "dark_metal.png",
+    "ground": "ground_outdoor.png"
+  }
+}

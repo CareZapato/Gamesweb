@@ -1,0 +1,20 @@
+{
+  "name": "@arena/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@arena/shared": "*",
+    "@colyseus/core": "^0.18.23",
+    "@colyseus/ws-transport": "^0.18.4",
+    "express": "^5.3.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "arena-shooter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "typecheck": "tsc -p shared --noEmit && tsc -p server --noEmit && tsc -p client --noEmit",
+    "test": "vitest run",
+    "test:e2e": "tsx tests/e2e/browser.e2e.ts",
+    "maps:shots": "tsx scripts/mapShots.ts",
+    "skins:template": "tsx scripts/skins.ts",
+    "weapons:template": "tsx scripts/weapons.ts",
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

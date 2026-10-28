@@ -1,0 +1,11 @@
+{
+  "weapons": {
+    "rifle": "atlas_rifle.png",
+    "shotgun": "atlas_shotgun.png",
+    "sniper": "atlas_sniper.png",
+    "rocket": "atlas_rocket.png",
+    "grenade": "atlas_grenade.png",
+    "plasma": "atlas_plasma.png",
+    "charge": "atlas_charge.png"
+  }
+}

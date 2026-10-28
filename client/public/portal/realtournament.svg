@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="RealTournament">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101827"/>
+      <stop offset="1" stop-color="#26151a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7a1a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#sky)"/>
+  <!-- arena floor and perspective lines -->
+  <path d="M0 118 L320 118 L320 180 L0 180Z" fill="#0b0f16"/>
+  <g stroke="#2a3446" stroke-width="1.2">
+    <path d="M160 118 L-40 180"/><path d="M160 118 L40 180"/><path d="M160 118 L160 180"/>
+    <path d="M160 118 L280 180"/><path d="M160 118 L360 180"/>
+    <path d="M0 132 H320"/><path d="M0 150 H320"/><path d="M0 170 H320"/>
+  </g>
+  <!-- pillars -->
+  <rect x="38" y="62" width="34" height="56" fill="#1b2333" stroke="#2a3446"/>
+  <rect x="248" y="50" width="34" height="68" fill="#1b2333" stroke="#2a3446"/>
+  <rect x="112" y="84" width="24" height="34" fill="#17202e" stroke="#2a3446"/>
+  <rect x="188" y="78" width="24" height="40" fill="#17202e" stroke="#2a3446"/>
+  <!-- beacon -->
+  <path d="M160 24 L196 118 H124Z" fill="url(#glow)"/>
+  <path d="M160 24 L172 56 H148Z" fill="#ff7a1a"/>
+  <!-- crosshair -->
+  <g stroke="#2fd0ff" stroke-width="3" stroke-linecap="round" fill="none">
+    <circle cx="160" cy="98" r="16"/>
+    <path d="M160 70 V82 M160 114 V126 M132 98 H144 M176 98 H188"/>
+  </g>
+  <circle cx="160" cy="98" r="2.5" fill="#2fd0ff"/>
+</svg>

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+e2e-artifacts/
+srv.err.txt
+srv.out.txt

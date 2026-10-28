@@ -1,0 +1,15 @@
+{
+  "weapons": {
+    "0": "weapons/weapon_0.png",
+    "1": "weapons/weapon_1.png",
+    "2": "weapons/weapon_2.png",
+    "3": "weapons/weapon_3.png",
+    "4": "weapons/weapon_4.png",
+    "5": "weapons/weapon_5.png",
+    "6": "weapons/weapon_6.png"
+  },
+  "flags": {
+    "0": "flags/0.svg",
+    "1": "flags/1.svg"
+  }
+}
