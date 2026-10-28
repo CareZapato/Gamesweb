@@ -22,6 +22,7 @@ export default defineConfig({
       input: {
         portal: resolve(import.meta.dirname, 'index.html'),
         realtournament: resolve(import.meta.dirname, 'realtournament/index.html'),
+        deadhold: resolve(import.meta.dirname, 'deadhold/index.html'),
       },
     },
   },

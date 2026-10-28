@@ -40,6 +40,18 @@ export const CATALOG: readonly CatalogGame[] = [
     thumbnail: '/portal/realtournament_card.png',
   },
   {
+    id: 'deadhold',
+    name: 'Reducto: Horda',
+    description:
+      'Supervivencia endless: oleadas de zombies desde el perímetro, tienda de mejoras entre rondas y niveles superados sin fin. Mismo motor y texturas.',
+    route: '/deadhold/',
+    roomName: null,
+    status: 'soon',
+    minPlayers: 1,
+    maxPlayers: 4,
+    thumbnail: '/portal/deadhold_card.svg',
+  },
+  {
     id: 'kart-cubico',
     name: 'Kart Cúbico',
     description: 'Carreras de karts de bloques en circuitos cortos y enrevesados.',
