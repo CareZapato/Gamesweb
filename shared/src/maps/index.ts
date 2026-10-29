@@ -1,6 +1,9 @@
 import { type MapDef, mapSupportsMode } from '../map';
 import type { GameMode } from '../rules';
 import { FOUNDRY } from './foundry';
+import { HOLDOUT } from './holdout';
+
+export { HOLDOUT_HORDE_SPAWNS } from './holdout';
 import { GATEWAYS } from './gateways';
 import { LAVA_SHAFT } from './lavaShaft';
 import { OUTPOST } from './outpost';
@@ -8,7 +11,7 @@ import { THREE_TOWERS } from './threeTowers';
 import { TWIN_DAM } from './twinDam';
 
 /** Lobby order: the four main arenas first, then the original two. */
-export const MAPS: readonly MapDef[] = [OUTPOST, THREE_TOWERS, GATEWAYS, LAVA_SHAFT, FOUNDRY, TWIN_DAM];
+export const MAPS: readonly MapDef[] = [OUTPOST, THREE_TOWERS, GATEWAYS, LAVA_SHAFT, FOUNDRY, TWIN_DAM, HOLDOUT];
 
 export const getMap = (id: string): MapDef | undefined => MAPS.find((m) => m.id === id);
 

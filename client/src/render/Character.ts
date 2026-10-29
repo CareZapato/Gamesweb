@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { buildWeapon, type WeaponModel } from './WeaponModels';
+import type { ZombieLook } from './zombieVisual';
 import { HIP_Y, LEG_X, NECK_Y, PART_OFFSET, partSize, SHOULDER } from './characterModel';
 
 /** How far the upper body drops when crouching / sliding (metres). */
@@ -99,6 +100,7 @@ export class Character {
   private ownedMats: THREE.Material[] = [];
   private phase = 0;
   private deathT = 0;
+  private zombieEmissive = 0;
 
   /** @param skin texture from `SkinTextures` (owned elsewhere; this class never disposes it). */
   constructor(name: string, color: number, shading: Shading, skin: THREE.Texture) {
@@ -162,9 +164,24 @@ export class Character {
     if (id === this.weaponId) return;
     this.weaponId = id;
     if (this.weapon) this.aim.remove(this.weapon.group);
+    if (id < 0) {
+      this.weapon = null;
+      return;
+    }
     this.weapon = buildWeapon(id);
     this.weapon.group.traverse((o) => ((o as THREE.Mesh).castShadow = true));
     this.aim.add(this.weapon.group);
+  }
+
+  /** Escala y emisión de horda (tinte del skin se aplica al crear el modelo). */
+  setZombieLook(look: ZombieLook | null) {
+    if (!look) {
+      this.zombieEmissive = 0;
+      this.root.scale.set(1, 1, 1);
+      return;
+    }
+    this.zombieEmissive = look.emissive;
+    this.root.scale.setScalar(look.scale);
   }
 
   muzzleWorld(out: THREE.Vector3): THREE.Vector3 {
@@ -222,7 +239,7 @@ export class Character {
     this.armR.rotation.z = -0.12;
     // spawn protection: the whole model flickers
     const flash = isProtected && Math.floor(performance.now() / 120) % 2 === 0;
-    this.mat.emissive.setHex(flash ? 0x707070 : 0x000000);
+    this.mat.emissive.setHex(flash ? 0x707070 : this.zombieEmissive);
   }
 
   dispose() {

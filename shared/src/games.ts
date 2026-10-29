@@ -7,6 +7,7 @@
  */
 export const ROOM_NAMES = {
   realtournament: 'realtournament',
+  deadhold: 'deadhold',
 } as const;
 
 export type GameId = keyof typeof ROOM_NAMES;

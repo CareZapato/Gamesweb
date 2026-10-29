@@ -1,0 +1,177 @@
+#hud-deadhold {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  padding: 0.45rem 1rem;
+  background: rgba(8, 12, 18, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 12;
+}
+
+#hud-scrap {
+  color: var(--accent2);
+  font-weight: 600;
+}
+
+#dh-shop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 6, 10, 0.72);
+  pointer-events: auto;
+}
+
+#dh-shop .panel {
+  width: min(36rem, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+#dh-shop-offers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.dh-offer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0.15rem 1rem;
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(20, 26, 36, 0.95);
+  cursor: pointer;
+}
+
+.dh-offer:hover:not(:disabled) {
+  border-color: var(--accent2);
+}
+
+.dh-offer.rare {
+  border-color: #a86bff;
+}
+
+.dh-offer.no-funds {
+  opacity: 0.92;
+  border-style: dashed;
+}
+
+.dh-offer.no-funds .dh-offer-cost {
+  color: var(--muted);
+}
+
+.dh-offer-build {
+  grid-column: 1;
+  font-size: 0.78rem;
+  color: var(--good);
+}
+
+.dh-offer-name {
+  font-weight: 600;
+  grid-column: 1;
+}
+
+.dh-offer-desc {
+  grid-column: 1;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dh-offer-cost {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--accent2);
+  font-weight: 600;
+}
+
+body.dh-shop-open {
+  cursor: default;
+}
+
+body.dh-shop-open #view {
+  pointer-events: none;
+}
+
+body.dh-shop-open #click-to-play {
+  display: none !important;
+}
+
+#dh-shop .panel,
+#dh-shop button {
+  pointer-events: auto;
+  user-select: text;
+}
+
+.deadhold-tagline {
+  color: var(--muted);
+  margin-top: -0.25rem;
+}
+
+.skin-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.35rem 0 0;
+}
+
+.skin-preset {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  clip-path: none;
+  border-radius: 4px;
+}
+
+.skin-preset.sel {
+  outline: 2px solid var(--accent2);
+  background: #1e3a4a;
+}
+
+#dh-shop-compact {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 1rem;
+  background: rgba(8, 12, 18, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+.dh-fs-btn {
+  margin-left: 0.25rem;
+  padding: 4px 10px !important;
+  font-size: 0.85rem !important;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+body.game-internal-pointer:not(.dh-shop-open) #view {
+  cursor: none;
+}
+
+body.game-internal-pointer:not(.dh-shop-open) .screen:not(.hidden),
+body.game-internal-pointer:not(.dh-shop-open) #dh-shop,
+body.game-internal-pointer:not(.dh-shop-open) #dh-shop-compact,
+body.game-internal-pointer:not(.dh-shop-open) #pause:not(.hidden) {
+  cursor: auto;
+}

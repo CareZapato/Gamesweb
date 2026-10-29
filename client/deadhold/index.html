@@ -1,40 +1,230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reducto: Horda</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #07090d;
-        color: #dfe6f2;
-        font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-      main {
-        max-width: 32rem;
-        padding: 2rem;
-        text-align: center;
-      }
-      .muted {
-        color: #8a96aa;
-      }
-      a {
-        color: #2fd0ff;
-      }
-    </style>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2307090d'/%3E%3Ccircle cx='16' cy='14' r='6' fill='%232fd0ff'/%3E%3C/svg%3E" />
   </head>
   <body>
     <div id="app">
-      <main>
-        <h1>Reducto: Horda</h1>
-        <p>Supervivencia endless por oleadas. Mejoras entre rondas, mismas armas y texturas del motor RealTournament.</p>
-        <p class="muted"><b>Próximamente</b> — implementación en rama <code>otro-juego</code> (v0.1.0).</p>
-        <p><a href="/">← Volver al portal</a></p>
-      </main>
+      <canvas id="view"></canvas>
+
+      <div id="hud" class="hidden">
+        <div id="hud-deadhold" class="hidden">
+          <div id="hud-wave">Oleada 1</div>
+          <div id="hud-level">Nivel 0</div>
+          <div id="hud-scrap">Scrap 0</div>
+          <button id="btn-fullscreen" type="button" class="small dh-fs-btn" title="Pantalla completa">⛶</button>
+        </div>
+
+        <div id="crosshair" class="ch-cross">
+          <i class="ch-dot"></i>
+          <i class="ch-ring"></i>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div id="hud-flag-pointers"></div>
+        <div id="hitmarker"></div>
+        <div id="scope" class="hidden"></div>
+        <div id="hud-charge" class="hidden"><i id="hud-charge-bar"></i></div>
+        <div id="damage-flash"></div>
+        <div id="damage-indicators"></div>
+
+        <div id="hud-top">
+          <div id="hud-timer" class="hidden"></div>
+          <div id="hud-score"></div>
+          <div id="hud-flags" class="hidden"></div>
+        </div>
+        <div id="damage-floaters"></div>
+        <div id="killfeed"></div>
+        <div id="center-msg"></div>
+        <div id="sub-msg"></div>
+
+        <div id="hud-bottom-left">
+          <div class="stat health" id="hud-health">
+            <label>SALUD</label>
+            <div class="stat-bar"><i id="hud-hp-bar"></i></div>
+            <b id="hud-hp">100</b><span class="stat-max" id="hud-hp-max">/100</span>
+            <div id="hud-low-hp" class="low-hp-warn hidden">SALUD BAJA</div>
+          </div>
+          <div class="stat shield empty" id="hud-shield-box">
+            <label>ESCUDO</label>
+            <div class="stat-bar shield-bar"><i id="hud-shield-bar"></i></div>
+            <b id="hud-shield">0</b><span class="stat-max" id="hud-shield-max">/100</span>
+          </div>
+          <div id="hud-dash"><label>DASH</label><div><i id="hud-dash-bar"></i></div></div>
+        </div>
+        <div id="hud-bottom-right">
+          <div id="hud-weapon-row">
+            <span id="hud-weapon-icon"></span>
+            <div>
+              <div id="hud-weapon-name">CARABINA</div>
+              <div id="hud-ammo">90</div>
+            </div>
+          </div>
+          <div id="hud-weapons"></div>
+        </div>
+
+        <div id="scoreboard" class="hidden"></div>
+        <div id="hud-scores-hint">TAB · Puntajes</div>
+        <div id="netstats" class="hidden"></div>
+        <div id="click-to-play" class="hidden">Clic aquí para capturar la mira del juego</div>
+      </div>
+
+      <div id="dh-shop" class="hidden">
+        <div class="panel">
+          <h2 id="dh-shop-wave">Tienda</h2>
+          <p id="dh-shop-timer" class="muted"></p>
+          <p class="muted">Elige una mejora al azar entre las ofertas. Al comprar, vuelves al combate con la mira del juego.</p>
+          <div id="dh-shop-offers"></div>
+          <button id="dh-shop-ready" type="button" class="primary big">Listo para la siguiente oleada</button>
+        </div>
+      </div>
+
+      <div id="dh-shop-compact" class="hidden">
+        <span id="dh-shop-compact-timer" class="muted"></span>
+        <button id="dh-shop-compact-ready" type="button" class="primary small">Listo · siguiente oleada</button>
+      </div>
+
+      <section id="screen-menu" class="screen">
+        <div class="panel menu-panel">
+          <a class="back-link" href="/">← Todos los juegos</a>
+          <h1 class="logo">REDUCTO<span>: HORDA</span></h1>
+          <p class="tagline deadhold-tagline">Coop 1–4 · mapa holdout · oleadas endless · tienda entre rondas</p>
+          <label class="field">
+            <span>Apodo</span>
+            <input id="in-name" maxlength="16" autocomplete="off" placeholder="Tu apodo" />
+          </label>
+          <button id="btn-create" class="primary big">Crear sala</button>
+          <div class="divider"><span>o entra con un código</span></div>
+          <div class="row">
+            <input id="in-code" maxlength="6" autocomplete="off" placeholder="CÓDIGO" class="code-input" />
+            <button id="btn-join">Entrar</button>
+          </div>
+          <div id="menu-status" class="status"></div>
+          <details class="advanced">
+            <summary>Servidor</summary>
+            <label class="field"><span>URL del servidor</span><input id="in-server" autocomplete="off" /></label>
+          </details>
+          <p class="controls-help">
+            WASD · Ratón · Disparo · Espacio saltar · Shift dash · 1–7 armas · Esc menú · Entre oleadas: tienda
+          </p>
+        </div>
+      </section>
+
+      <section id="screen-lobby" class="screen hidden">
+        <div class="panel lobby-panel">
+          <div class="lobby-head">
+            <div>
+              <div class="label">CÓDIGO DE SALA</div>
+              <div class="code-row"><span id="lobby-code">------</span><button id="btn-copy" class="small">Copiar</button></div>
+            </div>
+            <div id="lobby-phase" class="phase-tag">SALA</div>
+          </div>
+          <div class="lobby-body">
+            <div class="lobby-players">
+              <div class="label">JUGADORES <span id="lobby-count"></span></div>
+              <ul id="lobby-list"></ul>
+              <div id="skin-box" class="skin-box">
+                <div class="label">MODELO PREDEFINIDO</div>
+                <div id="skin-presets" class="skin-presets" role="listbox" aria-label="Modelo de personaje"></div>
+                <div class="label" style="margin-top: 0.75rem">O PNG PERSONALIZADO</div>
+                <div class="skin-row">
+                  <img id="skin-preview" class="skin-preview hidden" alt="Vista previa de la skin" width="64" height="64" />
+                  <div class="skin-actions">
+                    <div class="row">
+                      <button id="btn-skin" class="small">Cargar skin</button>
+                      <button id="btn-skin-clear" class="small">Quitar</button>
+                    </div>
+                    <input id="in-skin" type="file" accept="image/png" hidden />
+                    <span id="skin-status" class="muted">Elige un modelo o la skin por defecto.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lobby-settings">
+              <p class="muted">Mapa fijo: <b>Holdout</b>. Modo supervivencia cooperativo; el anfitrión inicia cuando quiera.</p>
+            </div>
+          </div>
+          <div class="lobby-actions">
+            <button id="btn-leave">Salir</button>
+            <div class="spacer"></div>
+            <button id="btn-ready" class="hidden">Estoy listo</button>
+            <button id="btn-start" class="primary">Iniciar horda</button>
+          </div>
+          <div id="lobby-status" class="status"></div>
+        </div>
+      </section>
+
+      <section id="screen-results" class="screen hidden">
+        <div class="panel results-panel">
+          <h2 id="results-title">Fin de la horda</h2>
+          <div id="results-sub" class="muted"></div>
+          <div id="results-table"></div>
+          <div class="lobby-actions">
+            <button id="btn-results-leave">Salir</button>
+            <div class="spacer"></div>
+            <span id="results-wait" class="muted"></span>
+            <button id="btn-rematch" class="primary">Revancha</button>
+            <button id="btn-to-lobby">Volver al lobby</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="pause" class="overlay hidden">
+        <div class="panel pause-panel">
+          <h2>Menú</h2>
+          <p class="muted">La horda sigue en el servidor.</p>
+          <div class="row pause-actions">
+            <button id="btn-resume" class="primary big">Volver al juego</button>
+            <button id="btn-scores" class="big">Puntajes</button>
+          </div>
+          <div class="row pause-actions">
+            <button id="btn-fs-enter" class="big">Pantalla completa</button>
+            <button id="btn-fs-exit" class="big hidden">Salir de pantalla completa</button>
+          </div>
+          <div id="pause-scores" class="pause-scores hidden"></div>
+          <div class="settings-grid" id="pause-settings">
+            <label>Calidad gráfica
+              <select id="set-quality">
+                <option value="low">Baja (recomendado)</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+                <option value="custom">Personalizada</option>
+              </select>
+            </label>
+            <p id="quality-hint" class="muted quality-hint"></p>
+            <label class="check"><input id="set-capfps" type="checkbox" /> Limitar render a 60 FPS</label>
+            <label>Sensibilidad <input id="set-sens" type="range" min="0.1" max="4" step="0.05" /><output id="out-sens"></output></label>
+            <label>Campo de visión <input id="set-fov" type="range" min="70" max="110" step="1" /><output id="out-fov"></output></label>
+            <label>Volumen <input id="set-vol" type="range" min="0" max="1" step="0.05" /><output id="out-vol"></output></label>
+            <label>Resolución máx.
+              <select id="set-pr"><option value="0.75">0.75</option><option value="1">1</option><option value="1.25">1.25</option><option value="1.5">1.5</option><option value="2">2</option></select>
+            </label>
+            <label>Partículas
+              <select id="set-particles"><option value="low">Bajas</option><option value="medium">Medias</option><option value="high">Altas</option></select>
+            </label>
+            <label class="check"><input id="set-shadows" type="checkbox" /> Sombras</label>
+            <label class="check"><input id="set-invert" type="checkbox" /> Invertir eje Y</label>
+            <label class="check"><input id="set-net" type="checkbox" /> Mostrar FPS y red</label>
+            <label>Mira
+              <select id="set-crosshair">
+                <option value="cross">Cruz</option>
+                <option value="dot">Punto</option>
+                <option value="circle">Círculo</option>
+              </select>
+            </label>
+            <label>Color de mira <input id="set-crosshair-color" type="color" /></label>
+            <label>Tamaño de mira <input id="set-crosshair-size" type="range" min="0.5" max="2" step="0.05" /><output id="out-crosshair-size"></output></label>
+            <label>Escala del HUD <input id="set-hud-scale" type="range" min="0.8" max="1.3" step="0.05" /><output id="out-hud-scale"></output></label>
+          </div>
+          <button id="btn-quit-match">Abandonar sala</button>
+        </div>
+      </section>
+
+      <div id="reconnecting" class="hidden">Conexión perdida. Reconectando…</div>
+      <div id="toasts"></div>
     </div>
+    <script type="module" src="/src/deadhold/main.ts"></script>
   </body>
 </html>

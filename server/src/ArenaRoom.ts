@@ -123,7 +123,7 @@ export class ArenaRoom extends GameRoom {
       if (!m || this.phase !== 'lobby') return;
       if (client.sessionId !== this.hostSession) return this.notice(client, 'warn', 'Solo el anfitrión puede cambiar la configuración.');
       const next = { ...this.settings };
-      if (raw?.mode === 'dm' || raw?.mode === 'ctf') {
+      if (raw?.mode === 'dm' || raw?.mode === 'ctf' || raw?.mode === 'survival') {
         if (raw.mode !== next.mode) {
           next.mode = raw.mode;
           next.timeLimit = MODE_RULES[raw.mode].defaultTimeLimit;

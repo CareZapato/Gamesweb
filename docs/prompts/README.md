@@ -118,6 +118,8 @@ Solo un archivo por **clave** de material en texturas (elige base o variante de 
 
 Layout: [SKINS.md](../SKINS.md). Plantilla: `client/public/assets/skins/template.png`.
 
+**Reducto: Horda** (jugador + 5 zombies): [skins/deadhold/README.md](skins/deadhold/README.md).
+
 ### `portal/` — catálogo (2)
 
 [realtournament_card.md](portal/realtournament_card.md), [realtournament_logo.md](portal/realtournament_logo.md)

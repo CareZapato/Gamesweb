@@ -1,4 +1,5 @@
 import {
+  archetypeIndex,
   Btn,
   CollisionWorld,
   computeExplosion,
@@ -31,6 +32,7 @@ import {
   playerAABB,
   rankPlayers,
   type DeathCause,
+  type EnemyArchetypeId,
   STREAK_RULES,
   spreeLabel,
   NET,
@@ -102,6 +104,13 @@ export interface SimPlayer {
   /** Counters exposed for tests and diagnostics. */
   shotsFired: number;
   rejectedInputs: number;
+  /** `zombie`: PvE enemy driven by the server (no weapons, never respawns, not on the scoreboard). */
+  kind: 'human' | 'zombie';
+  archetype: EnemyArchetypeId | null;
+  /** Run speed scale. Only zombies differ from 1, so client prediction of humans stays exact. */
+  speedMult: number;
+  /** Multiplier on hitscan damage dealt (survival shop upgrade). */
+  damageMult: number;
 }
 
 interface FlagRuntime {
@@ -168,8 +177,13 @@ export class GameSim {
     }
   }
 
+  /** Teams exist (and friendly fire is off) in CTF and in survival (humans vs. zombies). */
   get isTeamMode(): boolean {
-    return this.settings.mode === 'ctf';
+    return this.settings.mode === 'ctf' || this.settings.mode === 'survival';
+  }
+
+  get isSurvival(): boolean {
+    return this.settings.mode === 'survival';
   }
 
   get timeLeft(): number {
@@ -179,7 +193,46 @@ export class GameSim {
   // ---------------------------------------------------------------- players
 
   addPlayer(id: number, name: string, team: number): SimPlayer {
-    const p: SimPlayer = {
+    const p = this.newSimPlayer(id, name, team);
+    this.players.set(id, p);
+    this.respawn(p);
+    return p;
+  }
+
+  /**
+   * PvE enemy (survival only). Born alive at `pos` with the stats it was given; the caller (the wave
+   * director) drives it with `queueInput` like any other player. It never respawns: when it dies the
+   * director removes it.
+   */
+  addZombie(
+    id: number,
+    name: string,
+    team: number,
+    archetype: EnemyArchetypeId,
+    pos: Vec3,
+    yaw: number,
+    stats: { hp: number; shield: number; speedMult: number },
+  ): SimPlayer {
+    const p = this.newSimPlayer(id, name, team);
+    p.kind = 'zombie';
+    p.archetype = archetype;
+    p.speedMult = stats.speedMult;
+    p.maxHp = stats.hp;
+    p.hp = stats.hp;
+    p.maxShield = stats.shield;
+    p.shield = stats.shield;
+    p.sim = createPlayerSimState(pos.x, pos.y, pos.z);
+    p.sim.onGround = true;
+    p.yaw = yaw;
+    p.alive = true;
+    p.life = 1;
+    this.players.set(id, p);
+    this.emit({ k: 'spawn', p: id, pos: [pos.x, pos.y, pos.z] });
+    return p;
+  }
+
+  private newSimPlayer(id: number, name: string, team: number): SimPlayer {
+    return {
       id,
       name,
       team: this.isTeamMode ? team : -1,
@@ -215,10 +268,11 @@ export class GameSim {
       life: 0,
       shotsFired: 0,
       rejectedInputs: 0,
+      kind: 'human',
+      archetype: null,
+      speedMult: 1,
+      damageMult: 1,
     };
-    this.players.set(id, p);
-    this.respawn(p);
-    return p;
   }
 
   removePlayer(id: number): void {
@@ -236,8 +290,11 @@ export class GameSim {
     p.connected = connected;
     if (!connected) {
       this.dropFlag(p, true);
-      p.alive = false;
-      p.respawnTimer = 0;
+      // survival: the player stays in the world (untargetable, see `damage`) so a short drop does not cost the run
+      if (!this.isSurvival) {
+        p.alive = false;
+        p.respawnTimer = 0;
+      }
       p.queue.length = 0;
     }
   }
@@ -280,7 +337,8 @@ export class GameSim {
     if (this.isTeamMode) this.stepFlags();
     this.recordHistory();
 
-    if (!this.ended && this.timeLeft <= 0) this.end('time');
+    // survival is endless: it only ends when the director says so
+    if (!this.ended && !this.isSurvival && this.timeLeft <= 0) this.end('time');
   }
 
   private stepPlayer(p: SimPlayer): void {
@@ -288,7 +346,8 @@ export class GameSim {
       // inputs sent while dead are acknowledged but not simulated
       while (p.queue.length > 0) p.lastSeq = p.queue.shift()!.seq;
       p.credits = 0;
-      if (!p.connected) return;
+      // survival: death is final for the run (the director removes dead zombies; humans spectate)
+      if (!p.connected || this.isSurvival) return;
       p.respawnTimer -= DT;
       if (p.respawnTimer <= 0) this.respawn(p);
       return;
@@ -324,6 +383,7 @@ export class GameSim {
   /** Portal exits count as occupied while another living player stands on them. */
   private movementEnv(p: SimPlayer): MovementEnv {
     return {
+      runSpeedMult: p.speedMult,
       exitBlocked: (x, y, z) => {
         for (const o of this.players.values()) {
           if (o === p || !o.alive) continue;
@@ -346,7 +406,7 @@ export class GameSim {
     const wasGround = s.onGround;
     const warps = s.warps;
     const pads = s.pads;
-    stepMovement(s, cmd, this.world, DT, this.world.portals.length > 0 ? this.movementEnv(p) : undefined);
+    stepMovement(s, cmd, this.world, DT, this.world.portals.length > 0 || p.speedMult !== 1 ? this.movementEnv(p) : undefined);
     if (s.warps !== warps) {
       // links are pairs, so exactly one portal leads to the destination
       const entry = this.world.portals.findIndex((pt) => pt.to === s.warpTo);
@@ -425,7 +485,7 @@ export class GameSim {
         if (tr.targetId >= 0) {
           const tgt = targets.find((t) => t.id === tr.targetId);
           const cur = dmg.get(tr.targetId) ?? { amount: 0, zone: tr.zone, at: tgt ? hitZonePoint(tgt, tr.zone) : tr.end };
-          cur.amount += hitscanDamage(w, tr.t, tr.zone, fire.charge);
+          cur.amount += hitscanDamage(w, tr.t, tr.zone, fire.charge) * p.damageMult;
           cur.zone = mergeHitZone(cur.zone, tr.zone);
           cur.at = tgt ? hitZonePoint(tgt, cur.zone) : cur.at;
           dmg.set(tr.targetId, cur);
@@ -531,6 +591,8 @@ export class GameSim {
   damage(victim: SimPlayer, attackerId: number, amount: number, weapon: number, zone: HitZone, at: Vec3, from: Vec3): void {
     if (!victim.alive || this.ended || amount <= 0) return;
     if (victim.protectTimer > 0 && attackerId !== victim.id) return;
+    // survival: a dropped (reconnecting) player cannot be hurt while away
+    if (this.isSurvival && !victim.connected) return;
     const attacker = this.players.get(attackerId);
     if (this.isTeamMode && attacker && attacker.id !== victim.id && attacker.team === victim.team) return;
     // the shield takes the hit first; whatever it cannot absorb goes to health
@@ -570,7 +632,8 @@ export class GameSim {
     const suicide = !killer || killer.id === victim.id;
     const teamKill =
       !suicide && this.isTeamMode && killer!.team === victim.team;
-    const countsForStreak = !suicide && !teamKill;
+    // zombies do not build streaks or scores; their kills are just damage to the run
+    const countsForStreak = !suicide && !teamKill && killer!.kind === 'human';
 
     if (victim.spree >= STREAK_RULES.spreeEndMin) {
       const body: GameEventBody = { k: 'streak', p: victim.id, kind: 'ended', n: victim.spree };
@@ -583,7 +646,7 @@ export class GameSim {
 
     if (suicide) {
       victim.score -= MODE_RULES.dm.suicidePenalty;
-    } else {
+    } else if (killer!.kind === 'human') {
       killer!.kills++;
       killer!.score += this.isTeamMode ? MODE_RULES.ctf.killPoints : 1;
       if (countsForStreak) this.registerStreakKill(killer!);
@@ -662,7 +725,7 @@ export class GameSim {
       }
       const cfg = PICKUPS[def.kind];
       for (const p of this.players.values()) {
-        if (!p.alive) continue;
+        if (!p.alive || p.kind === 'zombie') continue;
         const dx = p.sim.x - def.pos[0];
         const dz = p.sim.z - def.pos[2];
         const dy = p.sim.y - def.pos[1];
@@ -813,7 +876,12 @@ export class GameSim {
       if (p.protectTimer > 0) flags |= PF.Protected;
       if (!p.connected) flags |= PF.Disconnected;
       if (p.sim.pendingWeapon >= 0) flags |= PF.Switching;
-      out.push([p.id, q100(p.sim.x), q100(p.sim.y), q100(p.sim.z), q1000(p.yaw), q1000(p.pitch), flags, p.sim.weapon, p.team, p.sim.warps & 255]);
+      let weapon = p.sim.weapon;
+      if (p.kind === 'zombie') {
+        flags |= PF.Zombie;
+        weapon = p.archetype ? archetypeIndex(p.archetype) : 0;
+      }
+      out.push([p.id, q100(p.sim.x), q100(p.sim.y), q100(p.sim.z), q1000(p.yaw), q1000(p.pitch), flags, weapon, p.team, p.sim.warps & 255]);
     }
     return out;
   }
@@ -854,7 +922,7 @@ export class GameSim {
 
   /** Live scoreboard, already ranked (see `rankPlayers` for the order and tie-breaks). */
   scoreboard(pings: Map<number, number>): ScoreEntry[] {
-    const rows = [...this.players.values()].map((p) => ({
+    const rows = [...this.players.values()].filter((p) => p.kind === 'human').map((p) => ({
       id: p.id,
       name: p.name,
       team: p.team,
@@ -877,7 +945,7 @@ export class GameSim {
     // carried flags are irrelevant once the match is over
     for (const f of this.flags) if (f) f.carrier = -1;
     const players: ResultEntry[] = rankPlayers(
-      [...this.players.values()].map((p) => ({
+      [...this.players.values()].filter((p) => p.kind === 'human').map((p) => ({
         id: p.id,
         name: p.name,
         team: p.team,

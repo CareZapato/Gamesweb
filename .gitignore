@@ -4,5 +4,7 @@ dist/
 .env
 .env.local
 e2e-artifacts/
+# Copias locales de arte generado (no son UV 128×128); usar scripts/skins.ts
+server/src/game/assets/
 srv.err.txt
 srv.out.txt

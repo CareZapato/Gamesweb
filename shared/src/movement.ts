@@ -80,6 +80,8 @@ export interface PlayerSimState {
 export interface MovementEnv {
   /** True when a portal exit at these feet coordinates is occupied by another player. */
   exitBlocked?: (x: number, y: number, z: number) => boolean;
+  /** Server-only: scales the run speed (PvE enemies). Players are always simulated with 1. */
+  runSpeedMult?: number;
 }
 
 export interface FireResult {
@@ -326,7 +328,7 @@ export const stepMovement = (s: PlayerSimState, cmd: InputCmd, world: CollisionW
     s.crouched = s.onGround && crouchHeld && s.slideTime <= 0;
     const wishSpeed =
       wish.x !== 0 || wish.z !== 0
-        ? PLAYER.runSpeed * moveSpeedMult(s, cmd.buttons) * (s.crouched ? PLAYER.crouchSpeedMult : 1)
+        ? PLAYER.runSpeed * (env?.runSpeedMult ?? 1) * moveSpeedMult(s, cmd.buttons) * (s.crouched ? PLAYER.crouchSpeedMult : 1)
         : 0;
     if (wishSpeed > 0) {
       const accel = s.onGround ? PLAYER.groundAccel : PLAYER.airAccel;

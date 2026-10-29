@@ -258,13 +258,85 @@ export const PALETTE_GOLD: Palette = {
   glove: [48, 38, 16],
 };
 
+/** Reducto: Horda — superviviente (referencia naranja / cian). */
+export const PALETTE_SURVIVOR_ORANGE: Palette = {
+  suit: [42, 46, 54],
+  suitDark: [28, 30, 36],
+  armor: [72, 78, 88],
+  armorDark: [48, 52, 60],
+  visor: [47, 208, 255],
+  skin: [200, 160, 130],
+  hair: [36, 32, 28],
+  boot: [34, 32, 36],
+  glove: [52, 50, 54],
+};
+export const PALETTE_SURVIVOR_CYAN: Palette = {
+  suit: [48, 58, 72],
+  suitDark: [32, 40, 52],
+  armor: [88, 96, 108],
+  armorDark: [58, 64, 74],
+  visor: [47, 208, 255],
+  skin: [190, 150, 124],
+  hair: [40, 36, 34],
+  boot: [36, 40, 48],
+  glove: [56, 60, 68],
+};
+export const PALETTE_SURVIVOR_STEEL: Palette = {
+  suit: [56, 62, 70],
+  suitDark: [38, 42, 48],
+  armor: [110, 118, 128],
+  armorDark: [72, 78, 86],
+  visor: [26, 136, 153],
+  skin: [188, 148, 122],
+  hair: [44, 40, 38],
+  boot: [40, 40, 44],
+  glove: [58, 58, 62],
+};
+
+/** Zombies: piel verduzca, ropa gris; ojos en visor del casco. */
+export const PALETTE_ZOMBIE_WALKER: Palette = {
+  suit: [52, 52, 56],
+  suitDark: [38, 38, 42],
+  armor: [122, 138, 114],
+  armorDark: [90, 102, 88],
+  visor: [255, 96, 32],
+  skin: [138, 154, 122],
+  hair: [68, 72, 64],
+  boot: [44, 44, 48],
+  glove: [118, 130, 110],
+};
+export const PALETTE_ZOMBIE_RUNNER: Palette = {
+  ...PALETTE_ZOMBIE_WALKER,
+  skin: [152, 168, 128],
+  armor: [136, 152, 118],
+};
+export const PALETTE_ZOMBIE_BRUTE: Palette = {
+  ...PALETTE_ZOMBIE_WALKER,
+  suit: [44, 48, 42],
+  armor: [90, 102, 82],
+  skin: [110, 124, 98],
+};
+export const PALETTE_ZOMBIE_ARMORED: Palette = {
+  ...PALETTE_ZOMBIE_WALKER,
+  armor: [106, 112, 120],
+  armorDark: [78, 84, 92],
+};
+export const PALETTE_ZOMBIE_COLOSSUS: Palette = {
+  ...PALETTE_ZOMBIE_WALKER,
+  armor: [74, 92, 68],
+  skin: [98, 112, 86],
+  visor: [255, 128, 40],
+};
+
 const TEAM: RGB = [240, 240, 240];
+const ACCENT_ORANGE: RGB = [255, 122, 26];
+const ACCENT_CYAN: RGB = [47, 208, 255];
 
 /**
  * A simple but complete skin: dark suit, grey armour, visor, and "team colour" zones painted white
  * with alpha 254 (the game tints them with the team colour, see docs/SKINS.md).
  */
-export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas => {
+export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE, teamColor: RGB = TEAM): Canvas => {
   const cv = new Canvas(size);
   const all = (part: PartId, c: RGB, a = 255) => FACE_NAMES.forEach((f) => cv.face(part, f, c, a));
   const sides = (part: PartId, fn: (f: FaceName) => void) => (['front', 'back', 'left', 'right'] as const).forEach(fn);
@@ -280,13 +352,13 @@ export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
 
   // helmet (outer, 13x13x13): armour shell, visor band, open chin, team crest on top
   all('helmet', pal.armor);
-  cv.face('helmet', 'top', TEAM, TEAM_ALPHA, { x: 5, y: 0, w: 3, h: 13 });
+  cv.face('helmet', 'top', teamColor, TEAM_ALPHA, { x: 5, y: 0, w: 3, h: 13 });
   cv.face('helmet', 'bottom', pal.armor, 0);
   cv.face('helmet', 'front', pal.armorDark, 255, { x: 0, y: 3, w: 13, h: 1 });
   cv.face('helmet', 'front', pal.visor, 255, { x: 1, y: 4, w: 11, h: 4 });
   cv.face('helmet', 'front', pal.armor, 0, { x: 2, y: 8, w: 9, h: 5 });
   for (const f of ['left', 'right'] as const) {
-    cv.face('helmet', f, TEAM, TEAM_ALPHA, { x: 4, y: 1, w: 5, h: 2 });
+    cv.face('helmet', f, teamColor, TEAM_ALPHA, { x: 4, y: 1, w: 5, h: 2 });
     cv.face('helmet', f, pal.armor, 0, { x: 0, y: 9, w: 13, h: 4 });
   }
   cv.face('helmet', 'back', pal.armorDark, 255, { x: 0, y: 10, w: 13, h: 3 });
@@ -294,14 +366,14 @@ export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
   // torso (base): suit with belt
   all('torso', pal.suit);
   sides('torso', (f) => cv.face('torso', f, pal.suitDark, 255, { x: 0, y: 16, w: f === 'left' || f === 'right' ? 8 : 12, h: 3 }));
-  cv.face('torso', 'front', TEAM, TEAM_ALPHA, { x: 5, y: 16, w: 2, h: 3 });
+  cv.face('torso', 'front', teamColor, TEAM_ALPHA, { x: 5, y: 16, w: 2, h: 3 });
   cv.face('torso', 'top', pal.suitDark);
   cv.face('torso', 'bottom', pal.suitDark);
 
   // chest plate (outer, 13x12x9): front panel in team colour, plain back and sides
   all('chest', pal.armor);
   cv.face('chest', 'front', pal.armorDark, 255, { x: 0, y: 0, w: 13, h: 1 });
-  cv.face('chest', 'front', TEAM, TEAM_ALPHA, { x: 3, y: 2, w: 7, h: 6 });
+  cv.face('chest', 'front', teamColor, TEAM_ALPHA, { x: 3, y: 2, w: 7, h: 6 });
   cv.face('chest', 'front', pal.armorDark, 255, { x: 3, y: 8, w: 7, h: 1 });
   cv.face('chest', 'back', pal.armorDark, 255, { x: 4, y: 3, w: 5, h: 5 });
   cv.face('chest', 'bottom', pal.armor, 0);
@@ -311,7 +383,7 @@ export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
     all(arm, pal.suit);
     for (const f of FACE_NAMES) {
       if (f === 'top' || f === 'bottom') continue;
-      cv.face(arm, f, TEAM, TEAM_ALPHA, { x: 0, y: 4, w: f === 'left' || f === 'right' ? 6 : 6, h: 2 });
+      cv.face(arm, f, teamColor, TEAM_ALPHA, { x: 0, y: 4, w: f === 'left' || f === 'right' ? 6 : 6, h: 2 });
       cv.face(arm, f, pal.armorDark, 255, { x: 0, y: 9, w: 6, h: 3 });
       cv.face(arm, f, pal.glove, 255, { x: 0, y: 15, w: 6, h: 5 });
     }
@@ -321,7 +393,7 @@ export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
 
   // shoulder pads (outer, 8x6x8): team colour with dark rim
   for (const pad of ['pauldronL', 'pauldronR'] as const) {
-    all(pad, TEAM, TEAM_ALPHA);
+    all(pad, teamColor, TEAM_ALPHA);
     for (const f of ['front', 'back', 'left', 'right'] as const) cv.face(pad, f, pal.armorDark, 255, { x: 0, y: 5, w: 8, h: 1 });
     cv.face(pad, 'bottom', pal.armor, 0);
   }
@@ -336,12 +408,16 @@ export const buildDefaultSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
       cv.face(leg, f, pal.boot, 255, { x: 0, y: 20, w, h: 7 });
       cv.face(leg, f, pal.armorDark, 255, { x: 0, y: 20, w, h: 1 });
     }
-    cv.face(leg, 'front', TEAM, TEAM_ALPHA, { x: 2, y: 11, w: 2, h: 2 });
+    cv.face(leg, 'front', teamColor, TEAM_ALPHA, { x: 2, y: 11, w: 2, h: 2 });
     cv.face(leg, 'bottom', [20, 20, 22]);
     cv.face(leg, 'top', pal.suitDark);
   }
   return cv;
 };
+
+/** Enemigo PvE: mismas UV, sin zonas de equipo (alfa 254). */
+export const buildZombieSkin = (pal: Palette, size = SKIN_BASE_SIZE): Canvas =>
+  buildDefaultSkin(pal, size, pal.armorDark);
 
 // ------------------------------------------------------------------ CLI
 
@@ -351,6 +427,14 @@ export const writeBundledSkins = (outDir: string) => {
     ['template.png', buildTemplate().png()],
     ['default_red.png', buildDefaultSkin(PALETTE_RED).png()],
     ['default_blue.png', buildDefaultSkin(PALETTE_BLUE).png()],
+    ['preset_survivor_orange.png', buildDefaultSkin(PALETTE_SURVIVOR_ORANGE, SKIN_BASE_SIZE, ACCENT_ORANGE).png()],
+    ['preset_survivor_cyan.png', buildDefaultSkin(PALETTE_SURVIVOR_CYAN, SKIN_BASE_SIZE, ACCENT_CYAN).png()],
+    ['preset_survivor_steel.png', buildDefaultSkin(PALETTE_SURVIVOR_STEEL).png()],
+    ['zombie_walker.png', buildZombieSkin(PALETTE_ZOMBIE_WALKER).png()],
+    ['zombie_runner.png', buildZombieSkin(PALETTE_ZOMBIE_RUNNER).png()],
+    ['zombie_brute.png', buildZombieSkin(PALETTE_ZOMBIE_BRUTE).png()],
+    ['zombie_armored.png', buildZombieSkin(PALETTE_ZOMBIE_ARMORED).png()],
+    ['zombie_colossus.png', buildZombieSkin(PALETTE_ZOMBIE_COLOSSUS).png()],
   ];
   for (const [name, buf] of files) {
     writeFileSync(resolve(outDir, name), buf);

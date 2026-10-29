@@ -49,6 +49,7 @@ import type { Sfx } from '../audio/Sfx';
 import { WEAPON_SOUNDS } from '../audio/Sfx';
 import type { Net } from '../net/Net';
 import { Character, DM_COLORS, TEAM_COLORS } from '../render/Character';
+import { zombieLook } from '../render/zombieVisual';
 import { Effects } from '../render/Effects';
 import { MapFeatures } from '../render/MapFeatures';
 import { MapView } from '../render/MapView';
@@ -167,7 +168,7 @@ export class Game {
   private skinTextures: SkinTextures;
   private stopSkinWatch: () => void;
   /** Team and tint of every character on screen, to rebuild their texture when a skin arrives. */
-  private charLook = new Map<number, { team: number; color: number }>();
+  private charLook = new Map<number, { team: number; color: number; zombie?: boolean }>();
   private viewFlash: THREE.Sprite;
   private viewFlashLife = 0;
   private recoil = 0;
@@ -355,6 +356,12 @@ export class Game {
     return this.skinTextures.get(id, this.d.start.settings.mode === 'ctf' ? team : -1, tint);
   }
 
+  private skinTexZombie(archetypeSlot: number, tint: number): THREE.Texture {
+    const img = this.d.skins.zombieImage(archetypeSlot);
+    if (img) return this.skinTextures.fromImage(img, tint);
+    return this.skinTex(-1, 0, tint);
+  }
+
   private myColor(): number {
     return this.tintFor(this.myId, this.myTeam);
   }
@@ -363,6 +370,7 @@ export class Game {
   private refreshSkins(id: number) {
     for (const [cid, c] of this.chars) {
       const look = this.charLook.get(cid);
+      if (look?.zombie) continue;
       if (look && (id === -1 || id === cid)) c.setSkin(this.skinTex(cid, look.team, look.color));
     }
     if (id === -1 || id === this.myId) this.viewArms.setSkin(this.skinTex(this.myId, this.myTeam, this.myColor()));
@@ -1053,23 +1061,38 @@ export class Game {
       const yaw = lerpAngle(a[4] / 1000, b[4] / 1000, f);
       const pitch = (a[5] + (b[5] - a[5]) * f) / 1000;
       const flags = f < 0.5 ? a[6] : b[6];
+      const isZombie = (b[6] & PF.Zombie) !== 0;
       const alive = (flags & PF.Alive) !== 0 && (flags & PF.Disconnected) === 0;
       const team = b[8];
       this.teams.set(id, team);
       let c = this.chars.get(id);
       if (!c) {
-        const color = this.tintFor(id, team);
-        c = new Character(this.name(id), color, this.characterShading, this.skinTex(id, team, color));
-        this.charLook.set(id, { team, color });
+        if (isZombie) {
+          const look = zombieLook(b[7]);
+          c = new Character('', look.tint, this.characterShading, this.skinTexZombie(b[7], look.tint));
+          this.charLook.set(id, { team, color: look.tint, zombie: true });
+        } else {
+          const color = this.tintFor(id, team);
+          c = new Character(this.name(id), color, this.characterShading, this.skinTex(id, team, color));
+          this.charLook.set(id, { team, color });
+        }
         this.chars.set(id, c);
         this.scene.add(c.root);
       }
       const speed = span > 0 ? Math.hypot(b[1] - a[1], b[3] - a[3]) / 100 / (span * DT) : 0;
       c.root.position.set(x, y, z);
-      c.setWeapon(b[7]);
-      c.setCarrier(flags & PF.Carrier ? TEAM_COLORS[team === 0 ? 1 : 0] : null);
-      // names only for teammates: enemy labels would reveal positions through walls
-      c.showLabel(ctf && team === this.myTeam && alive);
+      if (isZombie) {
+        c.setZombieLook(zombieLook(b[7]));
+        c.setWeapon(-1);
+        c.setCarrier(null);
+        c.showLabel(false);
+      } else {
+        c.setZombieLook(null);
+        c.setWeapon(b[7]);
+        c.setCarrier(flags & PF.Carrier ? TEAM_COLORS[team === 0 ? 1 : 0] : null);
+        // names only for teammates: enemy labels would reveal positions through walls
+        c.showLabel(ctf && team === this.myTeam && alive);
+      }
       c.update(
         dt,
         yaw,
@@ -1228,6 +1251,11 @@ export class Game {
 
   get cloneState(): PlayerSimState | null {
     return this.pred ? clonePlayerSimState(this.pred) : null;
+  }
+
+  /** Último snapshot recibido (p. ej. alinear yaw tras la tienda). */
+  latestSnapshot(): SnapshotMsg | null {
+    return this.snaps.length > 0 ? this.snaps[this.snaps.length - 1]! : null;
   }
 
   /** Weapon with the most kills per player this match (for the results screen). */

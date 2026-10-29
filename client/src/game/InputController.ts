@@ -19,6 +19,8 @@ export class InputController {
   invertY = false;
   /** Multiplier for zoomed aiming (fov ratio) so sensitivity feels consistent. */
   aimScale = 1;
+  /** Tienda / overlays HTML: sin pointer lock ni disparo (listeners siguen activos). */
+  uiBlocked = false;
 
   private keys = new Set<string>();
   private fireHeld = false;
@@ -73,7 +75,7 @@ export class InputController {
 
   /** Current buttons for this tick, including latched taps. */
   buttons(): number {
-    if (!this.isLocked()) return 0;
+    if (this.uiBlocked || !this.isLocked()) return 0;
     let b = this.latched;
     const k = this.keys;
     if (k.has('KeyW') || k.has('ArrowUp')) b |= Btn.Forward;
@@ -105,7 +107,7 @@ export class InputController {
   };
 
   private mouseMove = (e: MouseEvent) => {
-    if (!this.isLocked()) return;
+    if (this.uiBlocked || !this.isLocked()) return;
     const s = MOUSE_SCALE * this.sensitivity * this.aimScale;
     this.yaw -= e.movementX * s;
     this.pitch -= e.movementY * s * (this.invertY ? -1 : 1);
@@ -122,7 +124,7 @@ export class InputController {
     }
     // held keys are tracked even before the lock event arrives, so a key held while clicking counts
     this.keys.add(e.code);
-    if (!this.isLocked()) return;
+    if (this.uiBlocked || !this.isLocked()) return;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     if (!e.repeat) {
       if (e.code === 'Space') this.latched |= Btn.Jump;
@@ -147,7 +149,7 @@ export class InputController {
   };
 
   private mouseDown = (e: MouseEvent) => {
-    if (!this.isLocked()) return;
+    if (this.uiBlocked || !this.isLocked()) return;
     if (e.button === 0) {
       this.fireHeld = true;
       this.latched |= Btn.Fire;
@@ -160,7 +162,7 @@ export class InputController {
   };
 
   private wheel = (e: WheelEvent) => {
-    if (!this.isLocked() || e.deltaY === 0) return;
+    if (this.uiBlocked || !this.isLocked() || e.deltaY === 0) return;
     const dir = e.deltaY > 0 ? 1 : -1;
     this.selectWeapon((this.desiredWeapon + dir + WEAPON_COUNT) % WEAPON_COUNT);
   };

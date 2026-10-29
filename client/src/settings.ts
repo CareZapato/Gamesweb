@@ -24,6 +24,8 @@ export interface Settings {
   crosshairSize: number;
   /** HUD scale factor (0.8–1.3). */
   hudScale: number;
+  /** Id de `PLAYER_SKIN_PRESETS` (Deadhold / skins empaquetadas). Vacío = default del juego. */
+  skinPresetId: string;
 }
 
 const KEY = 'realtournament-settings';
@@ -49,6 +51,7 @@ const DEFAULTS: Settings = {
   crosshairColor: '#dcffe6',
   crosshairSize: 1,
   hudScale: 1,
+  skinPresetId: '',
 };
 
 export const loadSettings = (): Settings => {

@@ -16,7 +16,7 @@ jugar y haz commit antes del siguiente.
 | 8 | `08-cinco-arenas.md` | 4 mapas nuevos: exterior, tres torres, puertas y portales, pozo de lava | Sonnet |
 | 9 | `09-prompts-texturas-minimalistas.md` | Carpeta de prompts de imágenes simples (texturas, armas, iconos, pickups, skins) | Composer |
 | 10 | `10-escudo-y-marcador.md` | Escudo en lugar de armadura y marcador de puntajes en vivo | Sonnet |
-| 11 | `11-deadhold-horda-v0.1.0.md` | Segundo juego: supervivencia zombie endless (fases en `prompts/0.1.0/`) | Ver README 0.1.0 |
+| 11 | [`11-deadhold-horda-v0.1.0.md`](11-deadhold-horda-v0.1.0.md) | Segundo juego: supervivencia zombie endless | [Fases v0.1.0](../0.1.0/README.md) |
 
 Regla práctica de costo: **Composer** para tareas acotadas de UI, ajustes y documentos;
 **Sonnet** cuando se toca simulación compartida, red o servidor (si se equivoca ahí, sale más caro

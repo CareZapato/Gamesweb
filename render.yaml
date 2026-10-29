@@ -5,6 +5,7 @@ services:
     runtime: node
     plan: free
     # --include=dev: Vite lives in devDependencies; do not set NODE_ENV=production at build time.
+    # Client build is multi-page: portal, /realtournament/, /deadhold/ (see client/vite.config.ts).
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health

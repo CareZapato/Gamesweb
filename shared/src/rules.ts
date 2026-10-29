@@ -1,7 +1,7 @@
 import { ROOM } from './constants';
 import { WeaponId } from './weapons';
 
-export type GameMode = 'dm' | 'ctf';
+export type GameMode = 'dm' | 'ctf' | 'survival';
 
 export type BotDifficulty = 'easy' | 'normal' | 'hard';
 
@@ -48,11 +48,18 @@ export const MODE_RULES = {
     returnPoints: 1,
     killPoints: 1,
   },
+  survival: {
+    label: 'Supervivencia',
+    defaultTimeLimit: 60,
+    defaultScoreLimit: 0,
+    scoreLimitOptions: [0],
+    suicidePenalty: 0,
+  },
 } as const;
 
 /** Fills bot fields and clamps count so humans + bots ≤ maxPlayers. */
 export const normalizeMatchSettings = (raw: Partial<MatchSettings>, humanCount: number, maxPlayers = ROOM.maxPlayers): MatchSettings => {
-  const mode = raw.mode === 'ctf' ? 'ctf' : 'dm';
+  const mode: GameMode = raw.mode === 'ctf' ? 'ctf' : raw.mode === 'survival' ? 'survival' : 'dm';
   const botDifficulty = BOT_DIFFICULTIES.includes(raw.botDifficulty as BotDifficulty) ? (raw.botDifficulty as BotDifficulty) : 'normal';
   const botCount = clampBotCount(typeof raw.botCount === 'number' ? raw.botCount : 0, humanCount, maxPlayers);
   return {

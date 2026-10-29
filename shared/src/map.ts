@@ -139,11 +139,14 @@ export interface MapDef {
   portals?: PortalDef[];
   jumpPads?: JumpPadDef[];
   hazards?: HazardDef[];
+  /** PvE horde entry points (feet position). */
+  hordeSpawns?: Tuple3[];
 }
 
 /** CTF needs both flag bases and at least 4 spawns per team; DM only needs enough spawns. */
 export const mapSupportsMode = (map: MapDef, mode: GameMode): boolean => {
   if (!map.modes.includes(mode)) return false;
+  if (mode === 'survival') return map.spawns.length >= 1 && (map.hordeSpawns?.length ?? 0) >= 8;
   if (mode === 'dm') return map.spawns.length >= 4;
   const hasFlag = (t: 0 | 1) => map.flags.some((f) => f.team === t);
   const spawns = (t: 0 | 1) => map.spawns.filter((s) => s.team === t).length;

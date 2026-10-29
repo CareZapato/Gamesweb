@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { checkSkinHeader } from '@arena/shared';
+import { archetypeFromIndex, checkSkinHeader, ENEMY_ARCHETYPE_IDS, type EnemyArchetypeId } from '@arena/shared';
 import { TEAM_ALPHA } from './skinLayout';
 
 /** A decoded skin: RGBA bytes, row 0 = top of the picture. */
@@ -94,6 +94,8 @@ export class SkinStore {
   defaultRed: SkinImage | null = null;
   defaultBlue: SkinImage | null = null;
   private defaultsPromise: Promise<void> | null = null;
+  private zombieImages = new Map<EnemyArchetypeId, SkinImage>();
+  private zombiePromise: Promise<void> | null = null;
 
   /** Loads default_red / default_blue once. Safe to call repeatedly. */
   preloadDefaults(baseUrl: string): Promise<void> {
@@ -105,6 +107,24 @@ export class SkinStore {
       },
     );
     return this.defaultsPromise;
+  }
+
+  /** Skins opcionales `assets/skins/zombie_<arquetipo>.png` (Reducto: Horda). */
+  preloadZombieSkins(baseUrl: string): Promise<void> {
+    this.zombiePromise ??= Promise.all(
+      ENEMY_ARCHETYPE_IDS.map(async (id) => {
+        const img = await loadSkinUrl(`${baseUrl}assets/skins/zombie_${id}.png`);
+        if (img) this.zombieImages.set(id, img);
+      }),
+    ).then(() => {
+      this.listeners.forEach((fn) => fn(-2));
+    });
+    return this.zombiePromise;
+  }
+
+  zombieImage(archetypeIndex: number): SkinImage | null {
+    const id = archetypeFromIndex(archetypeIndex);
+    return id ? (this.zombieImages.get(id) ?? null) : null;
   }
 
   /** Stores (or clears) the skin of a player and decodes it. Invalid data silently keeps the default. */

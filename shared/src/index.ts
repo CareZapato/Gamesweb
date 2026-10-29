@@ -10,3 +10,4 @@ export * from './combat';
 export * from './skin';
 export * from './protocol';
 export * from './maps/index';
+export * from './deadhold/index';

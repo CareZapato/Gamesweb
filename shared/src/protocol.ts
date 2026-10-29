@@ -87,6 +87,8 @@ export const PF = {
   Switching: 64,
   Crouching: 128,
   Sliding: 256,
+  /** Reducto: Horda enemy. The `weapon` slot of the snapshot carries its archetype index. */
+  Zombie: 512,
 } as const;
 
 /**
