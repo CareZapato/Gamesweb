@@ -23,6 +23,9 @@ import {
   waveClearBonus,
   WAVES,
   type OwnedUpgrades,
+  WeaponId,
+  deadholdCanSelectWeapon,
+  deadholdResolveInputWeapon,
 } from '@arena/shared';
 
 describe('deadhold: oleadas', () => {
@@ -168,5 +171,19 @@ describe('deadhold: moneda y tienda', () => {
 
   it('resetPerWaveStacks conserva solo mejoras permanentes', () => {
     expect(resetPerWaveStacks({ maxHealth: 2, waveShield: 2, heal: 1 })).toEqual({ maxHealth: 2 });
+  });
+});
+
+describe('deadhold: armas en input', () => {
+  it('solo rifle hasta desbloquear escopeta', () => {
+    expect(deadholdCanSelectWeapon(WeaponId.Rifle, false)).toBe(true);
+    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, false)).toBe(false);
+    expect(deadholdCanSelectWeapon(WeaponId.Rocket, false)).toBe(false);
+    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, true)).toBe(true);
+  });
+
+  it('resolve mantiene el arma actual si el pedido no está permitido', () => {
+    expect(deadholdResolveInputWeapon(WeaponId.Sniper, WeaponId.Rifle, false)).toBe(WeaponId.Rifle);
+    expect(deadholdResolveInputWeapon(WeaponId.Shotgun, WeaponId.Rifle, true)).toBe(WeaponId.Shotgun);
   });
 });

@@ -44,6 +44,7 @@ import {
   WeaponId,
   WEAPONS,
   wrapAngle,
+  isValidWeapon,
 } from '@arena/shared';
 import type { Sfx } from '../audio/Sfx';
 import { WEAPON_SOUNDS } from '../audio/Sfx';
@@ -112,6 +113,10 @@ export interface GameDeps {
   start: MatchStartMsg;
   /** Skins received from the server for the players of the room. */
   skins: SkinStore;
+  /** Igual que el servidor al procesar input (p. ej. armas bloqueadas en supervivencia). */
+  resolveInputWeapon?: (requested: number, current: number) => number;
+  /** Ranuras del HUD (false = bloqueada). Si falta, todas desbloqueadas. */
+  weaponSlotsOwned?: () => readonly boolean[];
 }
 
 /**
@@ -448,6 +453,7 @@ export class Game {
     if (!this.alive || !this.pred) {
       // (re)spawn: take the server state as-is and face the spawn direction
       this.pred = simFromOwn(me);
+      this.syncWeaponAuthority(me);
       for (const c of this.pending) this.replay(c);
       this.prevPos = { x: this.pred.x, y: this.pred.y, z: this.pred.z };
       this.smooth.set(0, 0, 0);
@@ -459,7 +465,6 @@ export class Game {
         this.d.input.yaw = spawn.yaw;
         this.d.input.pitch = 0;
       }
-      this.d.input.desiredWeapon = me.pendingWeapon >= 0 ? me.pendingWeapon : me.weapon;
       return;
     }
     // reconcile: rewind to the acknowledged server state and replay unacknowledged inputs
@@ -467,6 +472,7 @@ export class Game {
     const beforeWarps = this.pred.warps;
     const beforeWarpYaw = this.pred.warpYaw;
     this.pred = simFromOwn(me);
+    this.syncWeaponAuthority(me);
     for (const c of this.pending) this.replay(c);
     if (this.pred.warps !== beforeWarps) {
       // the server's portal trip differs from the predicted one (e.g. an exit was occupied):
@@ -497,8 +503,22 @@ export class Game {
     }
   }
 
+  private resolveInputWeapon(requested: number): number {
+    const cur = this.pred?.weapon ?? 0;
+    const fn = this.d.resolveInputWeapon;
+    if (fn) return fn(requested, cur);
+    return isValidWeapon(requested) ? requested : cur;
+  }
+
+  /** Alinea mira del jugador y cola de inputs con el arma autoritativa (evita “CAMBIANDO…” infinito). */
+  private syncWeaponAuthority(me: OwnState) {
+    this.d.input.desiredWeapon = me.pendingWeapon >= 0 ? me.pendingWeapon : me.weapon;
+    for (const c of this.pending) c.weapon = this.resolveInputWeapon(c.weapon);
+  }
+
   private replay(c: InputCmd) {
     if (!this.pred) return;
+    c.weapon = this.resolveInputWeapon(c.weapon);
     stepMovement(this.pred, c, this.world, DT, this.moveEnv);
     stepWeapon(this.pred, c, DT, this.myId);
   }
@@ -809,12 +829,14 @@ export class Game {
 
   private fixedTick() {
     const input = this.d.input;
+    const weapon = this.resolveInputWeapon(input.desiredWeapon);
+    input.desiredWeapon = weapon;
     const cmd: InputCmd = {
       seq: ++this.seq,
       buttons: input.buttons(),
       yaw: input.yaw,
       pitch: input.pitch,
-      weapon: input.desiredWeapon,
+      weapon,
       viewTick: Math.max(0, this.renderTick()),
     };
     input.clearLatches();
@@ -1193,7 +1215,7 @@ export class Game {
       hud.setVitals(me.hp, me.maxHp, me.shield, me.maxShield, p ? 1 - p.dashCd / PLAYER.dashCooldown : 0);
       hud.respawnInfo(me.alive, me.respawnIn);
     }
-    if (p && this.alive) hud.setWeapons(p.weapon, p.ammo, p.pendingWeapon >= 0);
+    if (p && this.alive) hud.setWeapons(p.weapon, p.ammo, p.pendingWeapon >= 0, this.d.weaponSlotsOwned?.());
     const cw = p && this.alive ? getWeapon(p.weapon) : null;
     hud.setCharge(cw && cw.kind === 'hitscan' && cw.charge && p!.charge > 0 ? Math.min(1, p!.charge / cw.charge.time) : null);
     hud.setTimer(this.timeLeft);

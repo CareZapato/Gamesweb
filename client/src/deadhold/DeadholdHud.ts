@@ -113,10 +113,10 @@ export class DeadholdHud {
     $('dh-shop-offers').innerHTML = msg.offers.map((o) => offerButton(o, msg.scrap)).join('');
     for (const btn of $('dh-shop-offers').querySelectorAll<HTMLButtonElement>('button[data-id]')) {
       btn.onclick = () => {
+        if (btn.classList.contains('no-funds') || btn.disabled) return;
         const id = btn.dataset.id as UpgradeId;
         if (!id) return;
         this.onBuy?.(id);
-        this.dismissOverlay();
       };
     }
     if (this.overlayDismissed) {

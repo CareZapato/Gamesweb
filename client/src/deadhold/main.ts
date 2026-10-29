@@ -1,7 +1,17 @@
 import '../style.css';
 import './deadhold.css';
 import * as THREE from 'three';
-import { getMap, type GameOverMsg, type LobbyState, ROOM, SKIN } from '@arena/shared';
+import {
+  deadholdCanSelectWeapon,
+  deadholdResolveInputWeapon,
+  getMap,
+  type GameOverMsg,
+  type LobbyState,
+  ROOM,
+  SKIN,
+  WEAPON_COUNT,
+  type ShopMsg,
+} from '@arena/shared';
 import { Sfx } from '../audio/Sfx';
 import { Game } from '../game/Game';
 import { GamePointer } from '../game/GamePointer';
@@ -51,6 +61,27 @@ input.sensitivity = settings.sensitivity;
 input.invertY = settings.invertY;
 
 let shopOverlayOpen = false;
+let hasShotgun = false;
+let lastShopMsg: ShopMsg | null = null;
+
+const syncDeadholdWeaponRules = () => {
+  input.canSelectWeapon = (w) => deadholdCanSelectWeapon(w, hasShotgun);
+  if (game && input.desiredWeapon !== undefined) {
+    const snap = game.latestSnapshot?.();
+    const me = snap?.me;
+    const cur = me?.weapon ?? input.desiredWeapon;
+    input.desiredWeapon = deadholdResolveInputWeapon(input.desiredWeapon, cur, hasShotgun);
+  }
+};
+
+const shopPurchaseApplied = (prev: ShopMsg | null, next: ShopMsg): boolean => {
+  if (!prev || prev.wave !== next.wave) return false;
+  if (next.scrap < prev.scrap) return true;
+  for (const k of Object.keys(next.owned) as (keyof typeof next.owned)[]) {
+    if ((next.owned[k] ?? 0) > (prev.owned[k] ?? 0)) return true;
+  }
+  return false;
+};
 const syncFullscreenButtons = () => {
   const fs = document.fullscreenElement === appRoot;
   $('btn-fs-enter').classList.toggle('hidden', fs);
@@ -108,7 +139,22 @@ const net = new DeadholdNet(defaultServerUrl(), {
     gamePointer.release();
     dhHud.reset();
     dhHud.showInMatch();
-    game = new Game({ renderer, net: net as unknown as Net, hud, sfx, settings, input, start: m, skins });
+    hasShotgun = false;
+    lastShopMsg = null;
+    syncDeadholdWeaponRules();
+    game = new Game({
+      renderer,
+      net: net as unknown as Net,
+      hud,
+      sfx,
+      settings,
+      input,
+      start: m,
+      skins,
+      resolveInputWeapon: (requested, current) => deadholdResolveInputWeapon(requested, current, hasShotgun),
+      weaponSlotsOwned: () =>
+        Array.from({ length: WEAPON_COUNT }, (_, i) => deadholdCanSelectWeapon(i, hasShotgun)),
+    });
     input.attach();
     game.start();
     const mapName = getMap(m.settings.mapId)?.name ?? 'Holdout';
@@ -135,7 +181,12 @@ const net = new DeadholdNet(defaultServerUrl(), {
     }
   },
   shop(m) {
+    hasShotgun = (m.owned.unlockShotgun ?? 0) > 0;
+    syncDeadholdWeaponRules();
+    const bought = shopPurchaseApplied(lastShopMsg, m);
+    lastShopMsg = m;
     dhHud.renderShop(m);
+    if (bought) dhHud.dismissOverlay();
     setShopOverlay(!dhHud.isOverlayDismissed());
   },
   level(m) {
@@ -189,6 +240,7 @@ const setShopOverlay = (open: boolean) => {
     document.body.classList.remove('dh-shop-open');
     blurFocus();
     syncAimFromServer();
+    syncDeadholdWeaponRules();
   }
 };
 
@@ -214,6 +266,9 @@ function stopGame() {
   game = null;
   input.uiBlocked = false;
   shopOverlayOpen = false;
+  hasShotgun = false;
+  lastShopMsg = null;
+  input.canSelectWeapon = () => true;
   gamePointer.release();
   input.detach();
   document.body.classList.remove('dh-shop-open');

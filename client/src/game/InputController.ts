@@ -21,6 +21,8 @@ export class InputController {
   aimScale = 1;
   /** Tienda / overlays HTML: sin pointer lock ni disparo (listeners siguen activos). */
   uiBlocked = false;
+  /** Modo supervivencia: bloquear armas no desbloqueadas (deathmatch: siempre true). */
+  canSelectWeapon: (weapon: number) => boolean = () => true;
 
   private keys = new Set<string>();
   private fireHeld = false;
@@ -164,7 +166,13 @@ export class InputController {
   private wheel = (e: WheelEvent) => {
     if (this.uiBlocked || !this.isLocked() || e.deltaY === 0) return;
     const dir = e.deltaY > 0 ? 1 : -1;
-    this.selectWeapon((this.desiredWeapon + dir + WEAPON_COUNT) % WEAPON_COUNT);
+    for (let step = 1; step < WEAPON_COUNT; step++) {
+      const next = (this.desiredWeapon + dir * step + WEAPON_COUNT * 8) % WEAPON_COUNT;
+      if (this.canSelectWeapon(next)) {
+        this.selectWeapon(next);
+        return;
+      }
+    }
   };
 
   private blur = () => {
@@ -176,6 +184,7 @@ export class InputController {
 
   selectWeapon(w: number) {
     if (w < 0 || w >= WEAPON_COUNT || w === this.desiredWeapon) return;
+    if (!this.canSelectWeapon(w)) return;
     this.desiredWeapon = w;
     this.onWeaponKey(w);
   }
