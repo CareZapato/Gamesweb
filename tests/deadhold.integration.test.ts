@@ -178,7 +178,7 @@ describe('Reducto: Horda — director de oleadas (sim real, sin red)', () => {
     expect(director.canUseWeapon(me.id, WeaponId.Rifle)).toBe(true);
     expect(director.canUseWeapon(me.id, WeaponId.Shotgun)).toBe(false);
     expect(director.canUseWeapon(me.id, WeaponId.Rocket)).toBe(false);
-    director.humans.get(me.id)!.shotgun = true;
+    director.humans.get(me.id)!.owned = { unlockShotgun: 1 };
     expect(director.canUseWeapon(me.id, WeaponId.Shotgun)).toBe(true);
   });
 

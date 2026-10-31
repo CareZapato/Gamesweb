@@ -117,6 +117,8 @@ export interface GameDeps {
   resolveInputWeapon?: (requested: number, current: number) => number;
   /** Ranuras del HUD (false = bloqueada). Si falta, todas desbloqueadas. */
   weaponSlotsOwned?: () => readonly boolean[];
+  /** HTML extra bajo Tab (p. ej. build de supervivencia). */
+  survivalTabExtra?: () => string;
 }
 
 /**
@@ -1069,7 +1071,6 @@ export class Game {
     this.interpPrevById.clear();
     for (const e of s0.p) this.interpPrevById.set(e[0], e);
     const seen = new Set<number>();
-    const ctf = this.d.start.settings.mode === 'ctf';
     for (const b of s1.p) {
       const id = b[0];
       if (id === this.myId) continue;
@@ -1112,8 +1113,9 @@ export class Game {
         c.setZombieLook(null);
         c.setWeapon(b[7]);
         c.setCarrier(flags & PF.Carrier ? TEAM_COLORS[team === 0 ? 1 : 0] : null);
-        // names only for teammates: enemy labels would reveal positions through walls
-        c.showLabel(ctf && team === this.myTeam && alive);
+        const nameColor = this.charLook.get(id)?.color ?? this.tintFor(id, team);
+        c.setLabelText(this.name(id), nameColor);
+        c.showLabel(alive);
       }
       c.update(
         dt,
@@ -1245,7 +1247,8 @@ export class Game {
       hud.setScoreDM(this.scores, this.myId, this.d.start.settings.scoreLimit);
       hud.clearFlagPointers();
     }
-    hud.scoreboard(input.scoreboard, this.scores, mode, this.myId, this.teamScores, this.snapWeapons);
+    const tabExtra = mode === 'survival' ? this.d.survivalTabExtra?.() : undefined;
+    hud.scoreboard(input.scoreboard, this.scores, mode, this.myId, this.teamScores, this.snapWeapons, tabExtra);
     hud.clickToPlay(!input.locked);
     if (settings.showNetStats) {
       const latest = this.snaps[this.snaps.length - 1];

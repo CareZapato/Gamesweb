@@ -3,7 +3,7 @@
  * Los valores `hp`, `damage` y `speed` son BASE (oleada 0); `waves.ts` aplica el multiplicador por oleada.
  */
 
-export const ENEMY_ARCHETYPE_IDS = ['walker', 'runner', 'brute', 'armored', 'colossus'] as const;
+export const ENEMY_ARCHETYPE_IDS = ['walker', 'runner', 'brute', 'armored', 'colossus', 'overlord'] as const;
 
 export type EnemyArchetypeId = (typeof ENEMY_ARCHETYPE_IDS)[number];
 
@@ -100,6 +100,22 @@ export const ENEMY_ARCHETYPES: Readonly<Record<EnemyArchetypeId, EnemyArchetype>
     scrap: 26,
     weight: 2,
     special: false,
+  },
+  overlord: {
+    id: 'overlord',
+    label: 'Señor de la horda',
+    minWave: 5,
+    scale: 1.38,
+    hp: 380,
+    damage: 26,
+    speed: 2.8,
+    attackInterval: 1.35,
+    attackRange: 1.9,
+    shield: 40,
+    knockback: 8,
+    scrap: 45,
+    weight: 0,
+    special: true,
   },
   colossus: {
     id: 'colossus',

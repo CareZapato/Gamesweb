@@ -386,14 +386,23 @@ export class Hud {
   }
 
   /** Live scoreboard: Tab overlay while held, and the pinned copy in the pause menu. Never pauses the match. */
-  scoreboard(visible: boolean, entries: ScoreEntry[], mode: GameMode, meId: number, teamScores: number[], weapons: Map<number, number>) {
+  scoreboard(
+    visible: boolean,
+    entries: ScoreEntry[],
+    mode: GameMode,
+    meId: number,
+    teamScores: number[],
+    weapons: Map<number, number>,
+    tabExtra?: string,
+  ) {
     $('scoreboard').classList.toggle('hidden', !visible);
     if (!visible && !this.scoresPinned) return;
     const wIcon = (id: number) => {
       const w = weapons.get(id);
       return w !== undefined ? weaponIconHtml(w, 'wpn-icon-sb') : '';
     };
-    const html = scoreTableHtml(entries, mode, meId, teamScores, wIcon);
+    const extra = mode === 'survival' && tabExtra ? tabExtra : '';
+    const html = `${extra}${scoreTableHtml(entries, mode, meId, teamScores, wIcon)}`;
     if (visible) this.html('scoreboard', html);
     if (this.scoresPinned) this.html('pause-scores', html);
   }

@@ -90,9 +90,33 @@ export const renderLobby = (l: LobbyState, myId: number) => {
   $('score-limit-label').textContent = ctf ? 'Capturas para ganar' : 'Bajas para ganar';
   const map = getMap(l.settings.mapId);
   $('map-desc').textContent = map ? `${map.description} (Modos: ${map.modes.map((m) => MODE_RULES[m].label).join(', ')})` : '';
-  for (const id of ['sel-mode', 'sel-map', 'sel-time', 'sel-score', 'sel-bots', 'sel-bot-diff'])
-    ($(id) as HTMLSelectElement).disabled = !isHost || l.phase !== 'lobby';
-  $('host-only-hint').textContent = isHost ? '(eres el anfitrión)' : '(la elige el anfitrión)';
+
+  const hostPanel = $('lobby-settings-host');
+  const guestPanel = $('lobby-settings-guest');
+  hostPanel.classList.toggle('hidden', !isHost);
+  guestPanel.classList.toggle('hidden', isHost);
+
+  if (isHost) {
+    for (const id of ['sel-mode', 'sel-map', 'sel-time', 'sel-score', 'sel-bots', 'sel-bot-diff']) {
+      const el = $(id) as HTMLSelectElement;
+      el.disabled = l.phase !== 'lobby';
+    }
+    $('host-only-hint').textContent = '(eres el anfitrión)';
+  } else {
+    const scoreLabel = ctf ? 'Capturas para ganar' : 'Bajas para ganar';
+    const botLine =
+      l.settings.botCount === 0
+        ? 'Sin bots'
+        : `${l.settings.botCount} · ${BOT_DIFFICULTY_LABEL[l.settings.botDifficulty]}`;
+    guestPanel.innerHTML = [
+      `<p class="lobby-readonly-line"><span>Modo</span><b>${esc(rules.label)}</b></p>`,
+      `<p class="lobby-readonly-line"><span>Mapa</span><b>${esc(map?.name ?? l.settings.mapId)}</b></p>`,
+      `<p class="lobby-readonly-line"><span>Tiempo</span><b>${l.settings.timeLimit} min</b></p>`,
+      `<p class="lobby-readonly-line"><span>${esc(scoreLabel)}</span><b>${l.settings.scoreLimit}</b></p>`,
+      `<p class="lobby-readonly-line"><span>Bots</span><b>${esc(botLine)}</b></p>`,
+    ].join('');
+    $('host-only-hint').textContent = '(el anfitrión elige)';
+  }
 
   const others = l.players.filter((p) => !p.isBot && p.id !== l.hostId && p.connected);
   const allReady = others.every((p) => p.ready);

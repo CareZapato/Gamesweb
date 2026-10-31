@@ -1,3 +1,9 @@
+.dh-wave-left {
+  color: var(--accent2);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
 #hud-deadhold {
   position: absolute;
   top: 0.75rem;
@@ -155,6 +161,45 @@ body.dh-shop-open #click-to-play {
   border: 1px solid var(--line);
   border-radius: 8px;
   pointer-events: auto;
+}
+
+.dh-wave-skip-btn {
+  padding: 0.35rem 0.75rem !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.03em;
+  min-width: auto;
+  white-space: nowrap;
+}
+
+.dh-build-panel {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dh-build-panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--accent2);
+}
+
+.dh-build-table {
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.dh-build-table td {
+  padding: 0.2rem 0.35rem;
+  vertical-align: top;
+}
+
+.dh-build-table td:first-child {
+  color: var(--muted);
+  width: 42%;
+}
+
+#scoreboard .dh-build-panel {
+  text-align: left;
 }
 
 .dh-fs-btn {

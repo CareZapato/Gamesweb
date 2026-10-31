@@ -4,14 +4,24 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const SKIP_LABEL = 'Siguiente (N)';
+
+const resetSkipButton = () => {
+  const btn = $<HTMLButtonElement>('dh-wave-skip');
+  btn.disabled = false;
+  btn.textContent = SKIP_LABEL;
+  btn.title = 'Iniciar la oleada sin esperar al temporizador (tecla N)';
+};
+
 /** Oleada, nivel, scrap y panel de tienda entre rondas. */
 export class DeadholdHud {
   private scrap = 0;
   private shopReady = false;
   private shopWave = 0;
   private overlayDismissed = false;
+  private shopPhase = false;
   private onBuy: ((id: UpgradeId) => void) | null = null;
-  private onReady: (() => void) | null = null;
+  private onSkipWave: (() => void) | null = null;
   private onDismissOverlay: (() => void) | null = null;
 
   reset() {
@@ -19,10 +29,12 @@ export class DeadholdHud {
     this.shopReady = false;
     this.shopWave = 0;
     this.overlayDismissed = false;
+    this.shopPhase = false;
     this.setScrap(0);
     this.setLevel(0);
     this.hideShop();
     $('hud-deadhold').classList.add('hidden');
+    $('hud-wave-left').textContent = '';
   }
 
   isOverlayDismissed(): boolean {
@@ -33,24 +45,34 @@ export class DeadholdHud {
     $('hud-deadhold').classList.remove('hidden');
   }
 
+  /** Tienda entre oleadas (fase servidor o paneles visibles). */
+  inShop(): boolean {
+    if (this.shopPhase) return true;
+    return !$('dh-shop-compact').classList.contains('hidden') || !$('dh-shop').classList.contains('hidden');
+  }
+
+  /** Marca listo y salta el temporizador (clic en «Siguiente (N)» o tecla N). */
+  requestSkipWave(): void {
+    if (this.shopReady || !this.inShop()) return;
+    this.shopReady = true;
+    const btn = $<HTMLButtonElement>('dh-wave-skip');
+    btn.disabled = true;
+    btn.textContent = 'Esperando…';
+    this.onSkipWave?.();
+    this.dismissOverlay(true);
+  }
+
   bindShop(handlers: {
     buy: (id: UpgradeId) => void;
-    ready: () => void;
+    skipWave: () => void;
     onDismissOverlay?: () => void;
   }) {
     this.onBuy = handlers.buy;
-    this.onReady = handlers.ready;
+    this.onSkipWave = handlers.skipWave;
     this.onDismissOverlay = handlers.onDismissOverlay ?? null;
-    const markReady = (btn: HTMLButtonElement) => {
-      if (this.shopReady) return;
-      this.shopReady = true;
-      btn.textContent = 'Esperando al equipo…';
-      btn.disabled = true;
-      this.onReady?.();
-      this.dismissOverlay(true);
-    };
-    $('dh-shop-ready').onclick = () => markReady($<HTMLButtonElement>('dh-shop-ready'));
-    $('dh-shop-compact-ready').onclick = () => markReady($<HTMLButtonElement>('dh-shop-compact-ready'));
+
+    $('dh-wave-skip').onclick = () => this.requestSkipWave();
+    $('dh-shop-close').onclick = () => this.dismissOverlay(false);
   }
 
   /** Cierra el panel de mejoras; con `fromReady` engancha la mira aunque el panel ya estuviera cerrado. */
@@ -65,18 +87,30 @@ export class DeadholdHud {
   }
 
   updateWave(m: WaveMsg) {
+    this.shopPhase = m.phase === 'shop';
     const prep = m.phase === 'combat' && m.alive === 0 && m.queued > 0;
+    const specialTag = m.special ? ' · JEFE' : '';
     const line =
       m.phase === 'shop'
         ? `Oleada ${m.wave} superada · Tienda`
         : m.phase === 'gameover'
           ? `Caíste en oleada ${m.wave}`
           : prep
-            ? `Oleada ${m.wave} · Preparación ${Math.ceil(m.timer)} s`
-            : `Oleada ${m.wave} · ${m.alive}/${m.total} vivos · Cola ${m.queued}`;
+            ? `Oleada ${m.wave}${specialTag} · Preparación ${Math.ceil(m.timer)} s`
+            : `Oleada ${m.wave}${specialTag} · ${m.alive}/${m.total} vivos · Cola ${m.queued}`;
     $('hud-wave').textContent = line;
+
+    const leftEl = $('hud-wave-left');
+    if (m.phase === 'combat') {
+      const left = m.alive + m.queued;
+      leftEl.textContent = `Por derrotar: ${left}`;
+    } else {
+      leftEl.textContent = '';
+    }
+
     if (m.phase === 'shop') {
-      const t = `Cierra en ${Math.ceil(m.timer)} s`;
+      const sec = Math.ceil(m.timer);
+      const t = sec > 0 ? `${sec} s · N = siguiente oleada` : 'Iniciando…';
       $('dh-shop-timer').textContent = t;
       $('dh-shop-compact-timer').textContent = t;
     } else {
@@ -94,22 +128,23 @@ export class DeadholdHud {
   }
 
   renderShop(msg: ShopMsg) {
+    this.shopPhase = true;
     if (msg.wave !== this.shopWave) {
       this.shopWave = msg.wave;
       this.overlayDismissed = false;
     }
     this.scrap = msg.scrap;
     $('hud-scrap').textContent = `Scrap ${msg.scrap}`;
-    $('dh-shop-wave').textContent = `Oleada ${msg.wave} superada · elige 1 mejora`;
-    const timer = `Cierra en ${Math.ceil(msg.endsIn)} s`;
+    const elite = msg.wave % 5 === 0;
+    $('dh-shop-wave').textContent = elite
+      ? `Oleada jefe ${msg.wave} superada · tienda reforzada (−28 % costes)`
+      : `Oleada ${msg.wave} superada · elige 1 mejora`;
+    const sec = Math.ceil(msg.endsIn);
+    const timer = sec > 0 ? `${sec} s · N = siguiente oleada` : 'Iniciando…';
     $('dh-shop-timer').textContent = timer;
     $('dh-shop-compact-timer').textContent = timer;
     this.shopReady = false;
-    for (const id of ['dh-shop-ready', 'dh-shop-compact-ready'] as const) {
-      const readyBtn = $<HTMLButtonElement>(id);
-      readyBtn.textContent = 'Listo para la siguiente oleada';
-      readyBtn.disabled = false;
-    }
+    resetSkipButton();
     $('dh-shop-offers').innerHTML = msg.offers.map((o) => offerButton(o, msg.scrap)).join('');
     for (const btn of $('dh-shop-offers').querySelectorAll<HTMLButtonElement>('button[data-id]')) {
       btn.onclick = () => {
@@ -127,10 +162,11 @@ export class DeadholdHud {
     $('dh-shop-compact').classList.add('hidden');
     $('dh-shop').classList.remove('hidden');
     const first = $('dh-shop-offers').querySelector<HTMLButtonElement>('button[data-id]');
-    (first ?? $('dh-shop-ready')).focus({ preventScroll: true });
+    (first ?? $('dh-shop-close')).focus({ preventScroll: true });
   }
 
   hideShop() {
+    this.shopPhase = false;
     $('dh-shop').classList.add('hidden');
     $('dh-shop-compact').classList.add('hidden');
     this.shopReady = false;

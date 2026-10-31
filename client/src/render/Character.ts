@@ -49,7 +49,7 @@ const skinMesh = (id: PartId, mat: THREE.Material): THREE.Mesh => {
   return m;
 };
 
-const makeLabel = (text: string, color: number): THREE.Sprite => {
+const labelTexture = (text: string, color: number): THREE.CanvasTexture => {
   const c = document.createElement('canvas');
   c.width = 256;
   c.height = 64;
@@ -66,7 +66,11 @@ const makeLabel = (text: string, color: number): THREE.Sprite => {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.minFilter = THREE.LinearFilter;
   tex.generateMipmaps = false;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  return tex;
+};
+
+const makeLabel = (text: string, color: number): THREE.Sprite => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(text, color), depthTest: false, transparent: true }));
   s.scale.set(1.6, 0.4, 1);
   s.renderOrder = 10;
   return s;
@@ -101,6 +105,8 @@ export class Character {
   private phase = 0;
   private deathT = 0;
   private zombieEmissive = 0;
+  private labelText = '';
+  private labelColor = 0xffffff;
 
   /** @param skin texture from `SkinTextures` (owned elsewhere; this class never disposes it). */
   constructor(name: string, color: number, shading: Shading, skin: THREE.Texture) {
@@ -148,9 +154,24 @@ export class Character {
     this.flag.visible = false;
     this.upper.add(this.flag);
 
+    this.labelColor = color;
+    this.labelText = name;
     this.label = makeLabel(name, color);
     this.label.position.y = 2.1;
     this.root.add(this.label);
+  }
+
+  /** Actualiza el nombre flotante (p. ej. cuando llega el scoreboard). */
+  setLabelText(text: string, color: number) {
+    const t = text.trim() || '?';
+    if (t === this.labelText && color === this.labelColor) return;
+    this.labelText = t;
+    this.labelColor = color;
+    const lm = this.label.material as THREE.SpriteMaterial;
+    const prev = lm.map;
+    lm.map = labelTexture(t, color);
+    lm.needsUpdate = true;
+    prev?.dispose();
   }
 
   /** Swaps the skin texture (e.g. the player's own skin arrived after the model was created). */

@@ -4,12 +4,14 @@ import * as THREE from 'three';
 import {
   deadholdCanSelectWeapon,
   deadholdResolveInputWeapon,
+  deadholdUnlockedWeapons,
+  deadholdWeaponSlotOwned,
   getMap,
   type GameOverMsg,
   type LobbyState,
   ROOM,
   SKIN,
-  WEAPON_COUNT,
+  type OwnedUpgrades,
   type ShopMsg,
 } from '@arena/shared';
 import { Sfx } from '../audio/Sfx';
@@ -24,6 +26,7 @@ import { Hud } from '../ui/Hud';
 import { preloadWeaponIcons } from '../ui/weaponIcons';
 import { loadPresetSkinPng } from '../skins/loadPresetSkin';
 import { PLAYER_SKIN_PRESETS, presetById, type PlayerSkinPreset } from '../skins/playerPresets';
+import { deadholdBuildPanelHtml } from './buildPanel';
 import { DeadholdHud } from './DeadholdHud';
 import type { Net } from '../net/Net';
 import { DeadholdNet, defaultServerUrl, describeJoinError } from './Net';
@@ -61,16 +64,17 @@ input.sensitivity = settings.sensitivity;
 input.invertY = settings.invertY;
 
 let shopOverlayOpen = false;
-let hasShotgun = false;
+let ownedUpgrades: OwnedUpgrades = {};
+let weaponUnlocks = deadholdUnlockedWeapons({});
 let lastShopMsg: ShopMsg | null = null;
 
 const syncDeadholdWeaponRules = () => {
-  input.canSelectWeapon = (w) => deadholdCanSelectWeapon(w, hasShotgun);
+  input.canSelectWeapon = (w) => deadholdCanSelectWeapon(w, weaponUnlocks);
   if (game && input.desiredWeapon !== undefined) {
     const snap = game.latestSnapshot?.();
     const me = snap?.me;
     const cur = me?.weapon ?? input.desiredWeapon;
-    input.desiredWeapon = deadholdResolveInputWeapon(input.desiredWeapon, cur, hasShotgun);
+    input.desiredWeapon = deadholdResolveInputWeapon(input.desiredWeapon, cur, weaponUnlocks);
   }
 };
 
@@ -139,7 +143,9 @@ const net = new DeadholdNet(defaultServerUrl(), {
     gamePointer.release();
     dhHud.reset();
     dhHud.showInMatch();
-    hasShotgun = false;
+    input.onShopSkip = () => dhHud.requestSkipWave();
+    ownedUpgrades = {};
+    weaponUnlocks = deadholdUnlockedWeapons({});
     lastShopMsg = null;
     syncDeadholdWeaponRules();
     game = new Game({
@@ -151,9 +157,9 @@ const net = new DeadholdNet(defaultServerUrl(), {
       input,
       start: m,
       skins,
-      resolveInputWeapon: (requested, current) => deadholdResolveInputWeapon(requested, current, hasShotgun),
-      weaponSlotsOwned: () =>
-        Array.from({ length: WEAPON_COUNT }, (_, i) => deadholdCanSelectWeapon(i, hasShotgun)),
+      resolveInputWeapon: (requested, current) => deadholdResolveInputWeapon(requested, current, weaponUnlocks),
+      weaponSlotsOwned: () => deadholdWeaponSlotOwned(ownedUpgrades),
+      survivalTabExtra: () => deadholdBuildPanelHtml(ownedUpgrades),
     });
     input.attach();
     game.start();
@@ -181,7 +187,8 @@ const net = new DeadholdNet(defaultServerUrl(), {
     }
   },
   shop(m) {
-    hasShotgun = (m.owned.unlockShotgun ?? 0) > 0;
+    ownedUpgrades = m.owned;
+    weaponUnlocks = deadholdUnlockedWeapons(m.owned);
     syncDeadholdWeaponRules();
     const bought = shopPurchaseApplied(lastShopMsg, m);
     lastShopMsg = m;
@@ -253,7 +260,7 @@ const resumeGamePointer = () => {
 
 dhHud.bindShop({
   buy: (id) => net.buyUpgrade(id),
-  ready: () => net.shopReady(),
+  skipWave: () => net.shopReady(),
   onDismissOverlay: () => {
     setShopOverlay(false);
     resumeGamePointer();
@@ -264,9 +271,11 @@ function stopGame() {
   if (!game) return;
   game.dispose();
   game = null;
+  input.onShopSkip = null;
   input.uiBlocked = false;
   shopOverlayOpen = false;
-  hasShotgun = false;
+  ownedUpgrades = {};
+  weaponUnlocks = deadholdUnlockedWeapons({});
   lastShopMsg = null;
   input.canSelectWeapon = () => true;
   gamePointer.release();

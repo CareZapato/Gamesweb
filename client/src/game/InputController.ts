@@ -23,6 +23,8 @@ export class InputController {
   uiBlocked = false;
   /** Modo supervivencia: bloquear armas no desbloqueadas (deathmatch: siempre true). */
   canSelectWeapon: (weapon: number) => boolean = () => true;
+  /** Reducto: Horda — tecla N para saltar la tienda (ignora uiBlocked / pointer lock). */
+  onShopSkip: (() => void) | null = null;
 
   private keys = new Set<string>();
   private fireHeld = false;
@@ -119,6 +121,14 @@ export class InputController {
   };
 
   private keyDown = (e: KeyboardEvent) => {
+    if (e.code === 'KeyN' && this.onShopSkip && !e.repeat) {
+      const t = e.target as HTMLElement | null;
+      if (!t?.closest('input, textarea')) {
+        e.preventDefault();
+        this.onShopSkip();
+        return;
+      }
+    }
     if (e.code === 'Tab') {
       e.preventDefault();
       this.scoreboard = true;

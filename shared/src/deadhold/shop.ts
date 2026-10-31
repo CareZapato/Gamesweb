@@ -18,6 +18,11 @@ export const UPGRADE_IDS = [
   'ammoRefill',
   'waveShield',
   'unlockShotgun',
+  'unlockSniper',
+  'unlockRocket',
+  'unlockGrenade',
+  'unlockPlasma',
+  'unlockCharge',
 ] as const;
 
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
@@ -180,7 +185,67 @@ export const UPGRADES: Readonly<Record<UpgradeId, UpgradeDef>> = {
     label: 'Escopeta permanente',
     description: 'Desbloquea la escopeta para el resto de la partida',
     rarity: 'rare',
-    baseCost: 250,
+    baseCost: 220,
+    costGrowth: 1,
+    maxStack: 1,
+    perStack: 1,
+    consumable: false,
+    perWave: false,
+  },
+  unlockSniper: {
+    id: 'unlockSniper',
+    label: 'Fusil de precisión',
+    description: 'Desbloquea el fusil de precisión para el resto de la partida',
+    rarity: 'rare',
+    baseCost: 280,
+    costGrowth: 1,
+    maxStack: 1,
+    perStack: 1,
+    consumable: false,
+    perWave: false,
+  },
+  unlockRocket: {
+    id: 'unlockRocket',
+    label: 'Lanzacohetes',
+    description: 'Desbloquea el lanzacohetes para el resto de la partida',
+    rarity: 'rare',
+    baseCost: 320,
+    costGrowth: 1,
+    maxStack: 1,
+    perStack: 1,
+    consumable: false,
+    perWave: false,
+  },
+  unlockGrenade: {
+    id: 'unlockGrenade',
+    label: 'Lanzagranadas',
+    description: 'Desbloquea el lanzagranadas para el resto de la partida',
+    rarity: 'rare',
+    baseCost: 300,
+    costGrowth: 1,
+    maxStack: 1,
+    perStack: 1,
+    consumable: false,
+    perWave: false,
+  },
+  unlockPlasma: {
+    id: 'unlockPlasma',
+    label: 'Plasma',
+    description: 'Desbloquea el arma de plasma para el resto de la partida',
+    rarity: 'rare',
+    baseCost: 340,
+    costGrowth: 1,
+    maxStack: 1,
+    perStack: 1,
+    consumable: false,
+    perWave: false,
+  },
+  unlockCharge: {
+    id: 'unlockCharge',
+    label: 'Cañón de carga',
+    description: 'Desbloquea el cañón de carga para el resto de la partida',
+    rarity: 'rare',
+    baseCost: 360,
     costGrowth: 1,
     maxStack: 1,
     perStack: 1,
@@ -248,7 +313,14 @@ export const isOfferable = (owned: OwnedUpgrades, id: UpgradeId): boolean => !is
  * - Nunca ofrece una mejora que ya está en su tope ni la repite en la misma tienda.
  * - Cada `RARE_EVERY` oleadas incluye una mejora rara si queda alguna disponible.
  */
-export const generateShopOffers = (wave: number, owned: OwnedUpgrades, seed = 0): ShopOffer[] => {
+export const SPECIAL_SHOP_COST_MULT = 0.72;
+
+export const generateShopOffers = (
+  wave: number,
+  owned: OwnedUpgrades,
+  seed = 0,
+  opts?: { elite?: boolean },
+): ShopOffer[] => {
   const w = Math.max(1, Math.floor(wave));
   const count = offerCount(w);
   const rng = mulberry32(hash2(w, seed ^ 0x5eed));
@@ -260,6 +332,12 @@ export const generateShopOffers = (wave: number, owned: OwnedUpgrades, seed = 0)
   if (w % RARE_EVERY === 0 && rares.length > 0) {
     picked.push(rares[Math.floor(rng() * rares.length)]!);
   }
+  if (w >= 2) {
+    const weaponUnlocks = eligible.filter((id) => id.startsWith('unlock') && !picked.includes(id));
+    if (weaponUnlocks.length > 0 && rng() < 0.55) {
+      picked.push(weaponUnlocks[Math.floor(rng() * weaponUnlocks.length)]!);
+    }
+  }
   // Fisher-Yates parcial sobre las comunes.
   const pool = [...commons];
   while (picked.length < count && pool.length > 0) {
@@ -267,9 +345,12 @@ export const generateShopOffers = (wave: number, owned: OwnedUpgrades, seed = 0)
     picked.push(pool[i]!);
     pool.splice(i, 1);
   }
+  const elite = opts?.elite ?? false;
   return picked.map((id) => {
     const stacks = stacksOf(owned, id);
-    return { id, cost: upgradeCost(id, stacks), stacks, rarity: UPGRADES[id].rarity };
+    let cost = upgradeCost(id, stacks);
+    if (elite) cost = Math.max(1, Math.round(cost * SPECIAL_SHOP_COST_MULT));
+    return { id, cost, stacks, rarity: UPGRADES[id].rarity };
   });
 };
 

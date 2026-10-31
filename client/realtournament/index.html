@@ -129,12 +129,15 @@
             </div>
             <div class="lobby-settings">
               <div class="label">CONFIGURACIÓN <span id="host-only-hint"></span></div>
-              <label class="field"><span>Modo</span><select id="sel-mode"></select></label>
-              <label class="field"><span>Mapa</span><select id="sel-map"></select></label>
-              <label class="field"><span>Tiempo (min)</span><select id="sel-time"></select></label>
-              <label class="field"><span id="score-limit-label">Límite</span><select id="sel-score"></select></label>
-              <label class="field"><span>Bots</span><select id="sel-bots"></select></label>
-              <label class="field"><span>Dificultad bots</span><select id="sel-bot-diff"></select></label>
+              <div id="lobby-settings-guest" class="lobby-settings-guest hidden"></div>
+              <div id="lobby-settings-host">
+                <label class="field"><span>Modo</span><select id="sel-mode"></select></label>
+                <label class="field"><span>Mapa</span><select id="sel-map"></select></label>
+                <label class="field"><span>Tiempo (min)</span><select id="sel-time"></select></label>
+                <label class="field"><span id="score-limit-label">Límite</span><select id="sel-score"></select></label>
+                <label class="field"><span>Bots</span><select id="sel-bots"></select></label>
+                <label class="field"><span>Dificultad bots</span><select id="sel-bot-diff"></select></label>
+              </div>
               <p id="map-desc" class="muted"></p>
             </div>
           </div>

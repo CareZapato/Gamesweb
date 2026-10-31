@@ -26,6 +26,8 @@ import {
   type MatchResults,
   type MatchSettings,
   MODE_RULES,
+  survivalAmmoPickupIndices,
+  type WeaponId,
   type MovementEnv,
   multiKillLabel,
   mulberry32,
@@ -127,6 +129,11 @@ interface PickupRuntime {
   timer: number;
 }
 
+interface SurvivalAmmoSlot {
+  index: number;
+  weapon: number;
+}
+
 interface HistoryEntry {
   tick: number;
   players: Map<number, { x: number; y: number; z: number; alive: boolean; life: number }>;
@@ -155,6 +162,8 @@ export class GameSim {
   private nextEventId = 1;
   private history: HistoryEntry[] = [];
   private rng: () => number;
+  /** Supervivencia: cajas de munición activas (índice en map.pickups → arma). */
+  private survivalAmmoSlots: SurvivalAmmoSlot[] = [];
 
   constructor(settings: MatchSettings, seed = Date.now() >>> 0) {
     const map = getMap(settings.mapId);
@@ -715,10 +724,79 @@ export class GameSim {
 
   // ---------------------------------------------------------------- pickups
 
+  /** Supervivencia: los suministros del mapa vuelven al empezar cada oleada (no respawn en combate). */
+  resetWavePickups(): void {
+    for (const rt of this.pickups) {
+      rt.available = true;
+      rt.timer = 0;
+    }
+  }
+
+  /**
+   * Supervivencia: activa cajas de munición solo para armas desbloqueadas del equipo.
+   * `waveStart` reparte todas; `resupply` reabre cajas ya recogidas durante la oleada.
+   */
+  layoutSurvivalAmmo(
+    weapons: readonly number[],
+    slotsPerWeapon: number,
+    mode: 'waveStart' | 'resupply',
+    resupplyCount: number,
+  ): void {
+    if (!this.isSurvival) return;
+    const indices = survivalAmmoPickupIndices(this.map);
+    if (indices.length === 0) return;
+
+    if (mode === 'waveStart') {
+      this.survivalAmmoSlots = [];
+      for (const i of indices) this.pickups[i]!.available = false;
+      let k = 0;
+      for (const w of weapons) {
+        if (w < 0 || w >= WEAPON_COUNT) continue;
+        for (let s = 0; s < slotsPerWeapon && k < indices.length; s++, k++) {
+          const index = indices[k]!;
+          this.map.pickups[index]!.weapon = w as WeaponId;
+          this.pickups[index]!.available = true;
+          this.survivalAmmoSlots.push({ index, weapon: w });
+        }
+      }
+      return;
+    }
+
+    const closed = this.survivalAmmoSlots.filter((slot) => !this.pickups[slot.index]!.available);
+    if (closed.length === 0) return;
+    const need = this.weaponsLowOnAmmo(weapons);
+    const order = [...closed].sort((a, b) => {
+      const pa = need.indexOf(a.weapon);
+      const pb = need.indexOf(b.weapon);
+      const sa = pa < 0 ? 999 : pa;
+      const sb = pb < 0 ? 999 : pb;
+      return sa - sb || a.index - b.index;
+    });
+    for (const slot of order.slice(0, Math.max(1, resupplyCount))) {
+      this.pickups[slot.index]!.available = true;
+      this.pickups[slot.index]!.timer = 0;
+    }
+  }
+
+  /** Armas con menos munición media entre humanos vivos (prioridad de resurtido). */
+  private weaponsLowOnAmmo(weapons: readonly number[]): number[] {
+    const humans = [...this.players.values()].filter((p) => p.kind === 'human' && p.alive);
+    if (humans.length === 0) return [...weapons];
+    return [...weapons].sort((a, b) => {
+      const avg = (w: number) => {
+        let sum = 0;
+        for (const p of humans) sum += p.sim.ammo[w] ?? 0;
+        return sum / humans.length;
+      };
+      return avg(a) - avg(b);
+    });
+  }
+
   private stepPickups(): void {
     this.map.pickups.forEach((def, i) => {
       const rt = this.pickups[i];
       if (!rt.available) {
+        if (this.isSurvival) return;
         rt.timer -= DT;
         if (rt.timer <= 0) rt.available = true;
         return;

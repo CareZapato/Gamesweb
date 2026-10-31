@@ -26,14 +26,15 @@ import {
   WeaponId,
   deadholdCanSelectWeapon,
   deadholdResolveInputWeapon,
+  deadholdUnlockedWeapons,
 } from '@arena/shared';
 
 describe('deadhold: oleadas', () => {
   it('enemigos por oleada 1, 5, 10 y 25 (valores fijos)', () => {
     expect(enemiesInWave(1)).toBe(4);
-    expect(enemiesInWave(5)).toBe(12); // 11 base + 1 especial
-    expect(enemiesInWave(10)).toBe(21); // 20 base + 1 especial
-    expect(enemiesInWave(25)).toBe(50); // 49 base + 1 jefe
+    expect(enemiesInWave(5)).toBe(13); // 11 base + 2 mini-jefes
+    expect(enemiesInWave(10)).toBe(22); // 20 base + 2 mini-jefes
+    expect(enemiesInWave(25)).toBe(52); // 49 base + 3 jefes (coloso al final)
     expect(enemiesInWave(0)).toBe(0);
   });
 
@@ -54,8 +55,8 @@ describe('deadhold: oleadas', () => {
     const ids = (n: number) => activeArchetypes(n).map((a) => a.id);
     expect(ids(1)).toEqual(['walker']);
     expect(ids(3)).toEqual(['walker', 'runner']);
-    expect(ids(8)).toEqual(['walker', 'runner', 'brute']);
-    expect(ids(15)).toEqual(['walker', 'runner', 'brute', 'armored']);
+    expect(ids(8)).toEqual(['walker', 'runner', 'brute', 'overlord']);
+    expect(ids(15)).toEqual(['walker', 'runner', 'brute', 'armored', 'overlord']);
     expect(ids(25)).toEqual([...ENEMY_ARCHETYPE_IDS]);
   });
 
@@ -77,10 +78,11 @@ describe('deadhold: oleadas', () => {
     expect(new Set(planWave(1, 1))).toEqual(new Set(['walker']));
   });
 
-  it('especial garantizado cada 5 oleadas; coloso desde la 25', () => {
-    expect(planWave(4).at(-1)).not.toBe('colossus');
+  it('mini-jefes cada 5 oleadas; coloso cierra la oleada 25+', () => {
+    expect(planWave(4).includes('overlord')).toBe(false);
+    expect(planWave(5).filter((id) => id === 'overlord').length).toBeGreaterThanOrEqual(1);
+    expect(planWave(5)).toHaveLength(13);
     expect(planWave(10).at(-1)).toBe('brute');
-    expect(planWave(5)).toHaveLength(12);
     expect(planWave(25).at(-1)).toBe('colossus');
     expect(planWave(30).filter((id) => id === 'colossus')).toHaveLength(1);
     expect(planWave(24).includes('colossus')).toBe(false);
@@ -149,9 +151,11 @@ describe('deadhold: moneda y tienda', () => {
   });
 
   it('la mejora rara aparece cada 5 oleadas y no tras comprarla', () => {
-    expect(generateShopOffers(5, {}, 1).some((o) => o.id === 'unlockShotgun')).toBe(true);
-    expect(generateShopOffers(10, {}, 1).some((o) => o.id === 'unlockShotgun')).toBe(true);
-    expect(generateShopOffers(4, {}, 1).some((o) => o.id === 'unlockShotgun')).toBe(false);
+    const hasRare = (wave: number) =>
+      generateShopOffers(wave, {}, 1).some((o) => UPGRADES[o.id].rarity === 'rare');
+    expect(hasRare(5)).toBe(true);
+    expect(hasRare(10)).toBe(true);
+    expect(generateShopOffers(1, {}, 1).some((o) => o.id.startsWith('unlock'))).toBe(false);
     expect(generateShopOffers(5, { unlockShotgun: 1 }, 1).some((o) => o.id === 'unlockShotgun')).toBe(false);
   });
 
@@ -175,15 +179,19 @@ describe('deadhold: moneda y tienda', () => {
 });
 
 describe('deadhold: armas en input', () => {
-  it('solo rifle hasta desbloquear escopeta', () => {
-    expect(deadholdCanSelectWeapon(WeaponId.Rifle, false)).toBe(true);
-    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, false)).toBe(false);
-    expect(deadholdCanSelectWeapon(WeaponId.Rocket, false)).toBe(false);
-    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, true)).toBe(true);
+  it('solo rifle hasta desbloquear armas en tienda', () => {
+    const base = deadholdUnlockedWeapons({});
+    expect(deadholdCanSelectWeapon(WeaponId.Rifle, base)).toBe(true);
+    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, base)).toBe(false);
+    expect(deadholdCanSelectWeapon(WeaponId.Rocket, base)).toBe(false);
+    const shotgun = deadholdUnlockedWeapons({ unlockShotgun: 1 });
+    expect(deadholdCanSelectWeapon(WeaponId.Shotgun, shotgun)).toBe(true);
   });
 
   it('resolve mantiene el arma actual si el pedido no está permitido', () => {
-    expect(deadholdResolveInputWeapon(WeaponId.Sniper, WeaponId.Rifle, false)).toBe(WeaponId.Rifle);
-    expect(deadholdResolveInputWeapon(WeaponId.Shotgun, WeaponId.Rifle, true)).toBe(WeaponId.Shotgun);
+    const base = deadholdUnlockedWeapons({});
+    const shotgun = deadholdUnlockedWeapons({ unlockShotgun: 1 });
+    expect(deadholdResolveInputWeapon(WeaponId.Sniper, WeaponId.Rifle, base)).toBe(WeaponId.Rifle);
+    expect(deadholdResolveInputWeapon(WeaponId.Shotgun, WeaponId.Rifle, shotgun)).toBe(WeaponId.Shotgun);
   });
 });

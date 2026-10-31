@@ -40,6 +40,8 @@ export interface WaveMsg {
   queued: number;
   /** Segundos hasta que empieza a salir la horda (combate) o hasta que se cierra la tienda (shop). */
   timer: number;
+  /** Oleada con mini-jefes (múltiplo de 5). */
+  special?: boolean;
 }
 
 export interface ShopMsg {
@@ -101,4 +103,10 @@ export const DEADHOLD = {
   spawnBatch: 2,
   /** Jugadores máximos de la sala coop. */
   maxPlayers: 4,
+  /** Cajas de munición activas por cada arma desbloqueada del equipo. */
+  ammoSlotsPerWeapon: 2,
+  /** Durante el combate, reaparecen cajas de munición tomadas cada N segundos. */
+  ammoResupplySeconds: 28,
+  /** Cuántas cajas se reactivan en cada resurtido. */
+  ammoResupplyCount: 2,
 } as const;

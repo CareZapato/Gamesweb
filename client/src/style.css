@@ -334,6 +334,33 @@ select:focus {
   flex-direction: column;
   gap: 10px;
 }
+
+.lobby-settings-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lobby-readonly-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.lobby-readonly-line span {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.lobby-readonly-line b {
+  text-align: right;
+  font-weight: 600;
+}
 .lobby-actions {
   display: flex;
   gap: 10px;

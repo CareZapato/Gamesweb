@@ -13,6 +13,7 @@
       <div id="hud" class="hidden">
         <div id="hud-deadhold" class="hidden">
           <div id="hud-wave">Oleada 1</div>
+          <div id="hud-wave-left" class="dh-wave-left"></div>
           <div id="hud-level">Nivel 0</div>
           <div id="hud-scrap">Scrap 0</div>
           <button id="btn-fullscreen" type="button" class="small dh-fs-btn" title="Pantalla completa">⛶</button>
@@ -66,7 +67,7 @@
         </div>
 
         <div id="scoreboard" class="hidden"></div>
-        <div id="hud-scores-hint">TAB · Puntajes</div>
+        <div id="hud-scores-hint">TAB · Puntajes y build</div>
         <div id="netstats" class="hidden"></div>
         <div id="click-to-play" class="hidden">Clic aquí para capturar la mira del juego</div>
       </div>
@@ -77,13 +78,13 @@
           <p id="dh-shop-timer" class="muted"></p>
           <p class="muted">Elige una mejora al azar entre las ofertas. Al comprar, vuelves al combate con la mira del juego.</p>
           <div id="dh-shop-offers"></div>
-          <button id="dh-shop-ready" type="button" class="primary big">Listo para la siguiente oleada</button>
+          <button id="dh-shop-close" type="button" class="primary big">Cerrar tienda</button>
         </div>
       </div>
 
       <div id="dh-shop-compact" class="hidden">
         <span id="dh-shop-compact-timer" class="muted"></span>
-        <button id="dh-shop-compact-ready" type="button" class="primary small">Listo · siguiente oleada</button>
+        <button id="dh-wave-skip" type="button" class="dh-wave-skip-btn" title="Iniciar oleada (N)">Siguiente (N)</button>
       </div>
 
       <section id="screen-menu" class="screen">

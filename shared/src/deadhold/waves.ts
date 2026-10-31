@@ -30,14 +30,23 @@ export const WAVES = {
 const baseEnemies = (n: number): number =>
   Math.floor(WAVES.baseCount + n * WAVES.countPerWave + Math.floor(n ** WAVES.burstExp) * WAVES.burst);
 
-/** Oleadas 5, 10, 15... incluyen un enemigo especial extra. */
+/** Oleadas 5, 10, 15... incluyen mini-jefes y recompensas de tienda reforzadas. */
 export const isSpecialWave = (n: number): boolean => n >= WAVES.specialEvery && n % WAVES.specialEvery === 0;
 
-/** Total de enemigos de la oleada `n` (>=1), incluido el especial garantizado. */
+/** Mini-jefes extra en oleadas especiales (coloso cuenta como el último en oleada 25+). */
+export const specialBossCount = (n: number): number => {
+  if (!isSpecialWave(n)) return 0;
+  const w = Math.floor(n);
+  if (w >= 25) return 3;
+  if (w >= 15) return 3;
+  return 2;
+};
+
+/** Total de enemigos de la oleada `n` (>=1), incluidos mini-jefes. */
 export const enemiesInWave = (n: number): number => {
   if (!Number.isFinite(n) || n < 1) return 0;
   const w = Math.floor(n);
-  return baseEnemies(w) + (isSpecialWave(w) ? 1 : 0);
+  return baseEnemies(w) + specialBossCount(w);
 };
 
 export const hpMult = (n: number): number => 1 + Math.max(0, n) * WAVES.hpPerWave;
@@ -63,12 +72,22 @@ export const scaledEnemyStats = (id: EnemyArchetypeId, n: number): ScaledEnemySt
   };
 };
 
-/** Especial garantizado de la oleada `n`: jefe/coloso si ya existe, si no el más fuerte desbloqueado. */
-const specialFor = (n: number): EnemyArchetype => {
-  const active = activeArchetypes(n);
-  const specials = active.filter((a) => a.special);
-  const pool = specials.length > 0 ? specials : active;
-  return pool[pool.length - 1]!;
+/** Pool de mini-jefes para la oleada `n` (no entran en el spawn aleatorio normal). */
+const specialBossPool = (n: number): EnemyArchetype[] => {
+  const w = Math.floor(n);
+  const ids: EnemyArchetypeId[] = [];
+  if (w >= 5) ids.push('overlord');
+  if (w >= 8) ids.push('brute');
+  if (w >= 15) ids.push('armored');
+  if (w >= 25) ids.push('colossus');
+  return ids.map((id) => ENEMY_ARCHETYPES[id]);
+};
+
+const pickSpecialBoss = (n: number, index: number, total: number): EnemyArchetypeId => {
+  const w = Math.floor(n);
+  const pool = specialBossPool(w);
+  if (w >= 25 && index === total - 1) return 'colossus';
+  return pool[Math.min(index, pool.length - 1)]!.id;
 };
 
 /**
@@ -80,8 +99,8 @@ export const planWave = (n: number, seed = 0): EnemyArchetypeId[] => {
   const total = enemiesInWave(n);
   if (total === 0) return [];
   const w = Math.floor(n);
-  const special = isSpecialWave(w);
-  const regular = special ? total - 1 : total;
+  const bosses = specialBossCount(w);
+  const regular = total - bosses;
   const pool = activeArchetypes(w).filter((a) => a.weight > 0);
   const totalWeight = pool.reduce((s, a) => s + a.weight, 0);
   const rng = mulberry32(hash2(w, seed));
@@ -98,7 +117,7 @@ export const planWave = (n: number, seed = 0): EnemyArchetypeId[] => {
     }
     out.push(pick.id);
   }
-  if (special) out.push(specialFor(w).id);
+  for (let i = 0; i < bosses; i++) out.push(pickSpecialBoss(w, i, bosses));
   return out;
 };
 

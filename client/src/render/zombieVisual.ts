@@ -11,6 +11,7 @@ const ZOMBIE_TINT: Record<EnemyArchetypeId, number> = {
   brute: 0x4d6648,
   armored: 0x728078,
   colossus: 0x3a5235,
+  overlord: 0x5a7040,
 };
 
 /** Emisión verde apagada en reposo (Character la anula al parpadear protección). */

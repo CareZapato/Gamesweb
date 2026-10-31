@@ -37,6 +37,12 @@ import {
   waveClearBonus,
   WeaponId,
   WEAPONS,
+  deadholdCanSelectWeapon,
+  deadholdTeamUnlockedWeapons,
+  deadholdUnlockedWeapons,
+  isSpecialWave,
+  isWeaponUnlockUpgrade,
+  WEAPON_UNLOCK_UPGRADES,
 } from '@arena/shared';
 import type { GameSim, SimPlayer } from './GameSim';
 import { newZombieMemory, type ZombieMelee, type ZombieMemory, zombieInput, zombieMelee } from './ZombieBrain';
@@ -49,6 +55,11 @@ export const IMPLEMENTED_UPGRADES: ReadonlySet<UpgradeId> = new Set<UpgradeId>([
   'ammoRefill',
   'waveShield',
   'unlockShotgun',
+  'unlockSniper',
+  'unlockRocket',
+  'unlockGrenade',
+  'unlockPlasma',
+  'unlockCharge',
 ]);
 
 /** Los zombies usan ids altos para no chocar con los de los jugadores (que crecen desde 1). */
@@ -87,7 +98,6 @@ interface HumanState {
   owned: OwnedUpgrades;
   offers: ShopOffer[];
   ready: boolean;
-  shotgun: boolean;
   /** Escudo temporal concedido para la oleada en curso (se retira al limpiarla). */
   waveShield: number;
 }
@@ -118,6 +128,8 @@ export class WaveDirector {
   private graceLeft = 0;
   private spawnTimer = 0;
   private shopLeft = 0;
+  /** Segundos hasta el próximo resurtido de munición en combate. */
+  private ammoResupplyLeft = 0;
   private nextZombieId = ZOMBIE_ID_BASE;
   private started = false;
   private outbox: DirectorMsg[] = [];
@@ -150,17 +162,18 @@ export class WaveDirector {
   /** Registra la economía de un jugador ya añadido al sim. */
   registerHuman(id: number): void {
     if (this.humans.has(id)) return;
-    this.humans.set(id, { scrap: 0, owned: {}, offers: [], ready: false, shotgun: false, waveShield: 0 });
+    this.humans.set(id, { scrap: 0, owned: {}, offers: [], ready: false, waveShield: 0 });
   }
 
   removeHuman(id: number): void {
     this.humans.delete(id);
   }
 
-  /** Armas permitidas: solo el rifle hasta comprar la escopeta. El servidor corrige cualquier otra petición. */
+  /** Armas permitidas según desbloqueos de tienda (el servidor corrige cualquier otra petición). */
   canUseWeapon(id: number, weapon: number): boolean {
-    if (weapon === WeaponId.Rifle) return true;
-    return weapon === WeaponId.Shotgun && (this.humans.get(id)?.shotgun ?? false);
+    const hs = this.humans.get(id);
+    if (!hs) return weapon === WeaponId.Rifle;
+    return deadholdCanSelectWeapon(weapon, deadholdUnlockedWeapons(hs.owned));
   }
 
   get zombieCount(): number {
@@ -202,7 +215,14 @@ export class WaveDirector {
   private stepCombat(): void {
     const sim = this.sim;
     if (this.graceLeft > 0) this.graceLeft = Math.max(0, this.graceLeft - DT);
-    else this.spawnStep();
+    else {
+      this.spawnStep();
+      this.ammoResupplyLeft -= DT;
+      if (this.ammoResupplyLeft <= 0) {
+        this.ammoResupplyLeft = DEADHOLD.ammoResupplySeconds;
+        this.syncSurvivalAmmo('resupply');
+      }
+    }
 
     for (const [id, zr] of this.zombies) {
       const z = sim.players.get(id);
@@ -221,14 +241,21 @@ export class WaveDirector {
     if (this.graceLeft <= 0 && this.queue.length === 0 && this.zombies.size === 0) this.clearWave();
   }
 
+  private shopAllReady(): boolean {
+    const alive = this.aliveHumans();
+    if (alive.length === 0) return false;
+    return alive.every((p) => {
+      if (!p.connected) return true;
+      return this.humans.get(p.id)?.ready === true;
+    });
+  }
+
   private stepShop(): void {
     this.sim.step();
     if (this.aliveHumans().length === 0) return this.gameOver();
     this.shopLeft = Math.max(0, this.shopLeft - DT);
     this.waveDirty = true;
-    const alive = this.aliveHumans();
-    const allReady = alive.length > 0 && alive.every((p) => !p.connected || (this.humans.get(p.id)?.ready ?? true));
-    if (this.shopLeft <= 0 || allReady) this.startWave(this.wave + 1);
+    if (this.shopLeft <= 0 || this.shopAllReady()) this.startWave(this.wave + 1);
   }
 
   private aliveHumans(): SimPlayer[] {
@@ -239,9 +266,23 @@ export class WaveDirector {
 
   // ---------------------------------------------------------------- waves
 
+  private syncSurvivalAmmo(mode: 'waveStart' | 'resupply'): void {
+    const owned = [...this.humans.values()].map((hs) => hs.owned);
+    const weapons = deadholdTeamUnlockedWeapons(owned);
+    this.sim.layoutSurvivalAmmo(
+      weapons,
+      DEADHOLD.ammoSlotsPerWeapon,
+      mode,
+      DEADHOLD.ammoResupplyCount,
+    );
+  }
+
   private startWave(n: number): void {
     this.wave = n;
     this.phase = 'combat';
+    this.sim.resetWavePickups();
+    this.syncSurvivalAmmo('waveStart');
+    this.ammoResupplyLeft = DEADHOLD.ammoResupplySeconds;
     const plan = this.opts.planWave ? this.opts.planWave(n, this.seed) : planWave(n, this.seed);
     this.queue = [...plan];
     this.waveTotal = plan.length;
@@ -270,7 +311,8 @@ export class WaveDirector {
     this.level = this.wave;
     this.phase = 'shop';
     this.shopLeft = this.opts.shopSeconds;
-    const clearBonus = waveClearBonus(this.wave);
+    const eliteShop = isSpecialWave(this.wave);
+    const clearBonus = waveClearBonus(this.wave) * (eliteShop ? 2 : 1);
     const kills = this.totalKills;
     for (const [id, hs] of this.humans) {
       const p = this.sim.players.get(id);
@@ -282,7 +324,7 @@ export class WaveDirector {
       hs.waveShield = 0;
       hs.scrap += clearBonus;
       hs.ready = false;
-      hs.offers = this.makeOffers(id, hs);
+      hs.offers = this.makeOffers(id, hs, eliteShop);
       this.outbox.push({ to: id, type: DH_S2C.Level, msg: { level: this.level, kills, clearBonus } satisfies LevelMsg });
       this.sendScrap(id, hs, clearBonus, 'clear');
       this.sendShop(id, hs);
@@ -419,12 +461,12 @@ export class WaveDirector {
 
   // ---------------------------------------------------------------- shop
 
-  private makeOffers(id: number, hs: HumanState): ShopOffer[] {
+  private makeOffers(id: number, hs: HumanState, elite = false): ShopOffer[] {
     // las mejoras sin efecto implementado se tratan como "agotadas" para no venderlas
     const owned: OwnedUpgrades = { ...hs.owned };
     for (const u of UPGRADE_IDS) if (!IMPLEMENTED_UPGRADES.has(u)) owned[u] = UPGRADES[u].maxStack;
     const seed = hash2(this.seed, id);
-    const offers = generateShopOffers(this.wave, owned, seed);
+    const offers = generateShopOffers(this.wave, owned, seed, { elite });
     return this.ensureAffordableOffers(offers, owned, hs.scrap);
   }
 
@@ -498,18 +540,23 @@ export class WaveDirector {
         }
         break;
       }
-      case 'unlockShotgun':
-        hs.shotgun = true;
-        break;
       default:
+        if (isWeaponUnlockUpgrade(id)) this.unlockWeaponForPlayer(p, WEAPON_UNLOCK_UPGRADES[id]);
         break; // waveShield: se aplica al empezar la oleada
     }
+  }
+
+  private unlockWeaponForPlayer(p: SimPlayer, weaponId: number): void {
+    const w = WEAPONS[weaponId];
+    if (!w) return;
+    p.sim.ammo[weaponId] = Math.max(p.sim.ammo[weaponId] ?? 0, w.startAmmo);
   }
 
   /** El jugador marca que está listo para la siguiente oleada. */
   setReady(playerId: number): void {
     const hs = this.humans.get(playerId);
     if (hs && this.phase === 'shop') hs.ready = true;
+    if (this.phase === 'shop' && this.shopAllReady()) this.startWave(this.wave + 1);
   }
 
   /** Reenvía el estado actual a un jugador que acaba de reconectarse. */
@@ -529,6 +576,7 @@ export class WaveDirector {
       alive: this.zombies.size,
       queued: this.queue.length,
       timer: Math.ceil(this.phase === 'shop' ? this.shopLeft : this.graceLeft),
+      special: this.phase === 'combat' && isSpecialWave(this.wave),
     };
   }
 

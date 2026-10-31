@@ -4,11 +4,12 @@ import { spawn, YAW } from './helpers';
 
 /**
  * "Reducto": open arena for PvE horde mode. Raised central platform (safe spawn), walkable ring
- * ~80 m across, perimeter horde entry points and low cover — no dense maze.
+ * ~120 m across, perimeter horde entry points and low cover — no dense maze.
  */
 
-const HORDE_RADIUS = 38;
-const HORDE_COUNT = 10;
+const ARENA_HALF = 60;
+const HORDE_RADIUS = 56;
+const HORDE_COUNT = 12;
 
 /** Perimeter spawn feet positions (exported for server/tests). */
 export const HOLDOUT_HORDE_SPAWNS: Tuple3[] = Array.from({ length: HORDE_COUNT }, (_, i) => {
@@ -26,59 +27,80 @@ export const HOLDOUT: MapDef = {
   killY: -10,
   hordeSpawns: HOLDOUT_HORDE_SPAWNS,
   boxes: [
-    box(-42, -1, -42, 42, 0, 42, 'ground'),
-    box(-42, 0, -42, 42, 6, -41, 'concrete'),
-    box(-42, 0, 41, 42, 6, 42, 'concrete'),
-    box(-42, 0, -41, -41, 6, 41, 'concrete'),
-    box(41, 0, -41, 42, 6, 41, 'concrete'),
+    box(-ARENA_HALF, -1, -ARENA_HALF, ARENA_HALF, 0, ARENA_HALF, 'ground'),
+    box(-ARENA_HALF, 0, -ARENA_HALF, ARENA_HALF, 6, -ARENA_HALF + 1, 'concrete'),
+    box(-ARENA_HALF, 0, ARENA_HALF - 1, ARENA_HALF, 6, ARENA_HALF, 'concrete'),
+    box(-ARENA_HALF, 0, -ARENA_HALF + 1, -ARENA_HALF + 1, 6, ARENA_HALF - 1, 'concrete'),
+    box(ARENA_HALF - 1, 0, -ARENA_HALF + 1, ARENA_HALF, 6, ARENA_HALF - 1, 'concrete'),
 
-    // central platform (walkable deck y = 1.5); the ramps below climb onto it from the outside
-    box(-10, 0, -10, 10, 1.5, 10, 'concrete'),
+    // central platform (walkable deck y = 1.5); ramps climb from the outside ring
+    box(-12, 0, -12, 12, 1.5, 12, 'concrete'),
 
-    // ring cover
-    cover(-28, 0),
-    cover(28, 0),
-    cover(0, -30, 3, 2.4, 1.6),
-    cover(0, 30, 3, 2.4, 1.6),
-    cover(-22, 22),
-    cover(22, -22),
-    cover(-32, -12, 2, 2, 1.2),
-    cover(32, 12, 2, 2, 1.2),
-    box(-18, 0, -18, -14, 0.8, -14, 'panel'),
-    box(14, 0, 14, 18, 0.8, 18, 'panel'),
-    cover(-15, 8),
-    cover(15, -8),
+    // ring cover (scaled outward)
+    cover(-44, 0),
+    cover(44, 0),
+    cover(0, -48, 3, 2.4, 1.6),
+    cover(0, 48, 3, 2.4, 1.6),
+    cover(-36, 36),
+    cover(36, -36),
+    cover(-50, -18, 2, 2, 1.2),
+    cover(50, 18, 2, 2, 1.2),
+    box(-28, 0, -28, -22, 0.8, -22, 'panel'),
+    box(22, 0, 22, 28, 0.8, 28, 'panel'),
+    cover(-24, 14),
+    cover(24, -14),
+    cover(-18, -40),
+    cover(18, 40),
   ],
   ramps: [
-    // outside the deck (x/z beyond +-10): inside it they would be buried and the deck unreachable
-    ramp(-14, 0, -3, -10, 1.5, 3, '+x', 'concrete'),
-    ramp(10, 0, -3, 14, 1.5, 3, '-x', 'concrete'),
-    ramp(-3, 0, -14, 3, 1.5, -10, '+z', 'concrete'),
-    ramp(-3, 0, 10, 3, 1.5, 14, '-z', 'concrete'),
+    ramp(-16, 0, -4, -12, 1.5, 4, '+x', 'concrete'),
+    ramp(12, 0, -4, 16, 1.5, 4, '-x', 'concrete'),
+    ramp(-4, 0, -16, 4, 1.5, -12, '+z', 'concrete'),
+    ramp(-4, 0, 12, 4, 1.5, 16, '-z', 'concrete'),
   ],
   spawns: [
     spawn(0, 1.5, 0, YAW.pz),
-    spawn(-4, 1.5, 3, YAW.pz),
-    spawn(4, 1.5, -3, YAW.pz),
-    spawn(2, 1.5, 4, YAW.pz),
+    spawn(-5, 1.5, 4, YAW.pz),
+    spawn(5, 1.5, -4, YAW.pz),
+    spawn(3, 1.5, 5, YAW.pz),
   ],
+  /** Suministros en el anillo exterior (no en la plataforma central); se reinician cada oleada. */
   pickups: [
-    { kind: 'healthBig', pos: [-7, 1.5, -7] },
-    { kind: 'shield', pos: [7, 1.5, 7] },
-    { kind: 'ammo', weapon: WeaponId.Shotgun, pos: [7, 1.5, -7] },
-    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-7, 1.5, 7] },
+    { kind: 'healthBig', pos: [-46, 0, -14] },
+    { kind: 'healthBig', pos: [46, 0, 14] },
+    { kind: 'health', pos: [14, 0, -46] },
+    { kind: 'shield', pos: [-14, 0, 46] },
+    { kind: 'shieldBig', pos: [0, 0, -50] },
+    { kind: 'shield', pos: [-50, 0, 0] },
+    // anillo de munición (arma asignada por oleada según desbloqueos del equipo)
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [46, 0, -14] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-46, 0, 14] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [40, 0, -40] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-40, 0, 40] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [52, 0, 0] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-52, 0, 0] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [0, 0, 52] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [0, 0, -52] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [38, 0, 22] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-38, 0, -22] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [22, 0, -38] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-22, 0, 38] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [44, 0, 28] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-44, 0, -28] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [28, 0, 44] },
+    { kind: 'ammo', weapon: WeaponId.Rifle, pos: [-28, 0, -44] },
   ],
   flags: [],
   lights: [
-    { pos: [0, 8, 0], color: 0xfff2dc, intensity: 45, distance: 55 },
-    { pos: [0, 4, 0], color: 0xffe8c8, intensity: 28, distance: 22 },
+    { pos: [0, 10, 0], color: 0xfff2dc, intensity: 55, distance: 85 },
+    { pos: [0, 5, 0], color: 0xffe8c8, intensity: 32, distance: 28 },
   ],
   theme: {
     sky: 0xa9c3dc,
     skyTop: 0x2f64b0,
     fog: 0xa9bdd0,
-    fogNear: 70,
-    fogFar: 240,
+    fogNear: 90,
+    fogFar: 320,
     hemiSky: 0xd4e4ff,
     hemiGround: 0x5c4c3a,
     hemiIntensity: 1.05,
